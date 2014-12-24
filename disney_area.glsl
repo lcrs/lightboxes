@@ -4,6 +4,7 @@
 
 // TODO:
 //  o rotation control for anisotropic spec
+//  o use uv as tangent space basis when flame bug is fixed
 //  o when area lights are edge on, reduce light intensity
 
 uniform vec3 adskUID_baseColor;
@@ -17,7 +18,12 @@ uniform float adskUID_sheen;
 uniform float adskUID_sheenTint;
 uniform float adskUID_clearcoat;
 uniform float adskUID_clearcoatGloss;
-uniform int adskUID_samples;
+uniform int adskUID_minsamples;
+uniform int adskUID_maxsamples;
+uniform float adskUID_variancelimit;
+uniform bool adskUID_outputvariance;
+uniform bool adskUID_outputsamples;
+uniform int adskUID_method;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_sqr(float x) { return x*x; }
@@ -137,6 +143,10 @@ float adskUID_rand(vec2 co) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+float adskUID_luma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
 vec4 adskUID_lightbox(vec4 i) {
 	vec3 cam = adsk_getCameraPosition();
     vec3 p = adsk_getVertexPosition();
@@ -146,26 +156,61 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 lightbitan = cross(lighttan, adsk_getLightDirection());
     float w = adsk_getAreaLightWidth();
     float h = adsk_getAreaLightHeight();
-    // FIXME: Flame's tangent and binormal are broken?
     vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
     vec3 b = cross(n, t);
+
+    // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
 
+    // Accumulator
     vec3 a = vec3(0.0);
-    uint sn = uint(adskUID_samples);
+
+    // Max samples we will ever take
+    uint sn = uint(adskUID_maxsamples);
+
+    // How many samples we actually take to get a good low variance
+    uint bail = 0u;
+
+    // State variables for continuous variance calculation
+    float m = 0.0, s = 0.0, variance = 0.0;
+
     for(uint i = 0u; i < sn; i++) {
-        //vec2 sample = adskUID_hammersley(i, sn, seed);
-        //sample.x = fract(float(adskUID_hash(seed, i))/123456.7); // otherwise x increments regularly
-        //vec2 sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
-        vec2 sample = vec2(adskUID_rand(float(i+10u) * p.xy * 0.01 * adsk_getTime()), adskUID_rand(float(i+20u) * p.yx * 0.01 * adsk_getTime()));
+        // Generate position on area light for this sample
+        vec2 sample = vec2(0.0, 0.0);
+        if(adskUID_method == 0) {
+            sample = adskUID_hammersley(i, sn, seed);
+        } else if(adskUID_method == 1) {
+            sample = adskUID_hammersley(i, sn, seed);
+            sample.x = fract(float(adskUID_hash(seed, i))/123456.7); // otherwise x increments regularly
+        } else if(adskUID_method == 2) {
+            sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
+        } else if(adskUID_method == 3) {
+            sample = vec2(adskUID_rand(float(i+10u) * p.xy * 0.01 * adsk_getTime()), adskUID_rand(float(i+20u) * p.yx * 0.01 * adsk_getTime()));
+        }
+
+        // Go!
         sample -= 0.5;
         vec3 light = adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
         vec3 l = normalize(light - p);
-        a += adskUID_BRDF(l, v, n, t, b) * dot(n, l);
+        vec3 b = adskUID_BRDF(l, v, n, t, b) * dot(n, l);
+
+        // Accumulate
+        a += b;
+
+        // Update variance
+        float luma = adskUID_luma(pow(b, vec3(1.0/2.4))); // Perceptual weighting, luma of gamma'd colour
+        if(i == 0u) m = luma; else m = m + (luma - m)/float(i);
+        s = s + (luma - m) * (luma - s);
+        variance = s/float(i-1u);
+        bail++;
+        if((bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
     }
 
-    i.rgb = a / float(sn);
+    i.rgb = a / float(bail);
     i.a = 1.0;
+
+    if(adskUID_outputsamples) i.rgb = vec3(bail/sn);
+    if(adskUID_outputvariance) i.rgb = vec3(variance);
 
 	return i;
 }
