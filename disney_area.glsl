@@ -4,7 +4,6 @@
 
 // TODO:
 //  o rotation control for anisotropic spec
-//  o vary sampling seed over time
 //  o when area lights are edge on, reduce light intensity
 
 uniform vec3 adskUID_baseColor;
@@ -120,14 +119,18 @@ uint hash(uint x, uint y) {
     return seed;
 }
 
-float hammersley(uint bits, uint seed) {
+float radicalInverse_VdC(uint bits, uint seed) {
     bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x00ff00ffu) << 8u) | ((bits & 0xff00ff00u) >> 8u);
-    bits = ((bits & 0x0f0f0f0fu) << 4u) | ((bits & 0xf0f0f0f0u) >> 4u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xccccccccu) >> 2u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xaaaaaaaau) >> 1u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
     bits ^= seed;
-    return float(bits) * 2.3283064365386963e-10; // divide by 1<<32
+    return float(bits) * 2.3283064365386963e-10; // divide by 0x100000000
+ }
+
+vec2 hammersley(uint i, uint n, uint seed) {
+    return fract(vec2(float(i)/float(n), radicalInverse_VdC(i, seed)));
 }
 
 vec4 adskUID_lightbox(vec4 i) {
@@ -142,17 +145,11 @@ vec4 adskUID_lightbox(vec4 i) {
     // FIXME: Flame's tangent and binormal are broken?
     vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
     vec3 b = cross(n, t);
-    uint seed1 = hash(uint(16.0*gl_FragCoord.x), uint(16.0*gl_FragCoord.y));
-    seed1 = hash(seed1, uint(adsk_getTime()));
-    uint seed2 = hash(uint(32.0*gl_FragCoord.y), uint(32.0*gl_FragCoord.x));
-    seed2 = hash(seed2, 1234u);
-    seed2 = hash(seed2, uint(adsk_getTime()));
+    uint seed = hash(hash(uint(gl_FragCoord.x), uint(gl_FragCoord.y)), uint(adsk_getTime()));
 
     vec3 a = vec3(0.0);
     for(uint i = 0u; i < uint(adskUID_samples); i++) {
-        //seed1 = hash(seed1, i);
-        //seed2 = hash(seed2, i);
-        vec2 sample = vec2(hammersley(i, seed1), hammersley(i, seed2)) - 0.5;
+        vec2 sample = hammersley(i, uint(adskUID_samples), seed) - 0.5;
         vec3 light = adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
         vec3 l = normalize(light - p);
         a += adskUID_BRDF(l, v, n, t, b) * dot(n, l);
