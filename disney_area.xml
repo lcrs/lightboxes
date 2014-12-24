@@ -1,4 +1,4 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="The Disney BRDF for area lights" Name="Disney Area Lights">
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="The Disney BRDF for area lights" Name="Disney Arealights">
    <Shader OutputBitDepth="Output" Index="1">
       <Uniform Inc="0.01" Tooltip="" Row="0" Col="0" Page="0" IconType="None" ValueType="Colour" Type="vec3" DisplayName="Colour" Name="adskUID_baseColor">
          <SubUniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5"></SubUniform>
