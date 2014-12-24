@@ -109,7 +109,7 @@ vec3 adskUID_BRDF( vec3 L, vec3 V, vec3 N, vec3 X, vec3 Y )
         + Gs*Fs*Ds + 0.25*adskUID_clearcoat*Gr*Fr*Dr;
 }
 
-uint hash(uint x, uint y) {
+uint adskUID_hash(uint x, uint y) {
     const uint M = 1664525u, C = 1013904223u;
     uint seed = (x * M + y + C) * M;
     seed ^= (seed >> 11u);
@@ -119,7 +119,7 @@ uint hash(uint x, uint y) {
     return seed;
 }
 
-float radicalInverse_VdC(uint bits, uint seed) {
+float adskUID_radicalInverse_VdC(uint bits, uint seed) {
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
@@ -129,8 +129,12 @@ float radicalInverse_VdC(uint bits, uint seed) {
     return float(bits) * 2.3283064365386963e-10; // divide by 0x100000000
  }
 
-vec2 hammersley(uint i, uint n, uint seed) {
-    return fract(vec2(float(i)/float(n), radicalInverse_VdC(i, seed)));
+vec2 adskUID_hammersley(uint i, uint n, uint seed) {
+    return fract(vec2(float(i)/float(n), adskUID_radicalInverse_VdC(i, seed)));
+}
+
+float adskUID_rand(vec2 co) {
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 vec4 adskUID_lightbox(vec4 i) {
@@ -145,17 +149,22 @@ vec4 adskUID_lightbox(vec4 i) {
     // FIXME: Flame's tangent and binormal are broken?
     vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
     vec3 b = cross(n, t);
-    uint seed = hash(hash(uint(gl_FragCoord.x), uint(gl_FragCoord.y)), uint(adsk_getTime()));
+    uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
 
     vec3 a = vec3(0.0);
-    for(uint i = 0u; i < uint(adskUID_samples); i++) {
-        vec2 sample = hammersley(i, uint(adskUID_samples), seed) - 0.5;
+    uint sn = uint(adskUID_samples);
+    for(uint i = 0u; i < sn; i++) {
+        //vec2 sample = adskUID_hammersley(i, sn, seed);
+        //sample.x = fract(float(adskUID_hash(seed, i))/123456.7); // otherwise x increments regularly
+        //vec2 sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
+        vec2 sample = vec2(adskUID_rand(float(i+10u) * p.xy * 0.01 * adsk_getTime()), adskUID_rand(float(i+20u) * p.yx * 0.01 * adsk_getTime()));
+        sample -= 0.5;
         vec3 light = adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
         vec3 l = normalize(light - p);
         a += adskUID_BRDF(l, v, n, t, b) * dot(n, l);
     }
 
-    i.rgb = a / float(adskUID_samples);
+    i.rgb = a / float(sn);
     i.a = 1.0;
 
 	return i;
