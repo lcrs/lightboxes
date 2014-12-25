@@ -198,10 +198,13 @@ vec4 adskUID_lightbox(vec4 i) {
         a += b;
 
         // Update variance
-        float luma = adskUID_luma(pow(b, vec3(1.0/2.4))); // Perceptual weighting, luma of gamma'd colour
-        if(i == 0u) m = luma; else m = m + (luma - m)/float(i);
-        s = s + (luma - m) * (luma - s);
-        variance = s/float(i-1u);
+        float mk1 = m;
+        float sk1 = s;
+        float k = float(i);
+        float xk = adskUID_luma(pow(b, vec3(1.0/2.4))); // Perceptual weighting, luma of gamma'd colour
+        if(i == 0u) m = xk; else m = mk1 + (xk - mk1)/k;
+        s = sk1 + (xk - mk1) * (xk - m);
+        variance = s/(k-1.0);
         bail++;
         if((bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
     }
