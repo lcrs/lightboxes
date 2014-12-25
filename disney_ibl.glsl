@@ -161,9 +161,16 @@ float adskUID_luma(vec3 c) {
 
 vec3 adskUID_hemi(vec2 uv) {
     float phi = uv.y * 2.0 * adskUID_PI;
-    float cosTheta = 1.0 - uv.x;
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-    return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+    float costheta = 1.0 - uv.x;
+    float sintheta = sqrt(1.0 - costheta * costheta);
+    return normalize(vec3(cos(phi) * sintheta, sin(phi) * sintheta, costheta));
+}
+
+vec2 adskUID_cylinder(vec3 v) {   
+   const float factor = 1.0 / (2.0 * adskUID_PI);
+   const float offset = -0.25;
+   float x = atan(v.z, v.x ) * factor + offset;
+   return vec2(fract(x), v.y * 0.5 + 0.5);
 }
 
 vec4 adskUID_lightbox(vec4 i) {
@@ -207,8 +214,8 @@ vec4 adskUID_lightbox(vec4 i) {
         }
 
         // Go!
-        vec3 l = adskUID_hemi(sample) * world2tangent;
-        vec3 env = adsk_getAngularMapIBL(0, sample, 0.0);
+        vec3 l = world2tangent * adskUID_hemi(sample);
+        vec3 env = adsk_getAngularMapIBL(0, adskUID_cylinder(l), 0.0);
         vec3 b = env * adskUID_BRDF(l, v, n, t, b) * dot(n, l);
 
         // Accumulate
