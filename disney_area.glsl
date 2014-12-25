@@ -206,13 +206,17 @@ vec4 adskUID_lightbox(vec4 i) {
         s = sk1 + (xk - mk1) * (xk - m);
         variance = s/(k-1.0);
         bail++;
-        if((bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
+        if((bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/10.0))) break;
     }
 
     i.rgb = a / float(bail);
     i.a = 1.0;
 
-    if(adskUID_outputsamples) i.rgb = vec3(bail/sn);
+    if(adskUID_outputsamples) {
+        if(bail == uint(adskUID_minsamples)) i.r = 1.0; else i.r = 0.0;
+        if(bail == uint(adskUID_maxsamples)) i.b = 1.0; else i.b = 0.0;
+        i.g = float(bail)/100.0;
+    }
     if(adskUID_outputvariance) i.rgb = vec3(variance);
 
 	return i;
