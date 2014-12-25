@@ -7,6 +7,7 @@
 //  o use uv as tangent space basis when flame bug is fixed
 //  o when area lights are edge on, reduce light intensity
 //  o importance sampling... push samples toward spec peak at least?
+//  o single-sided light option? taken care of by flame's lighting in i.a?
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
