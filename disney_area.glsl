@@ -6,6 +6,7 @@
 //  o rotation control for anisotropic spec
 //  o use uv as tangent space basis when flame bug is fixed
 //  o when area lights are edge on, reduce light intensity
+//  o importance sampling... push samples toward spec peak at least?
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
