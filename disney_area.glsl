@@ -143,6 +143,19 @@ float adskUID_rand(vec2 co) {
     return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+vec2 adskUID_halton(uint i) {
+    uvec2 base = uvec2(7u, 3u);
+    vec2 result = vec2(0.0);
+    vec2 f = 1.0 / vec2(base);
+    uvec2 index = uvec2(i, i);
+    while (index.x > 0u || index.y > 0u) {
+        result = result + f * vec2(index % base);
+        index = index / base;
+        f = f / vec2(base);
+    }
+    return result;
+}
+
 float adskUID_luma(vec3 c) {
     return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
@@ -186,6 +199,8 @@ vec4 adskUID_lightbox(vec4 i) {
             sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
         } else if(adskUID_method == 3) {
             sample = vec2(adskUID_rand(float(i+10u) * p.xy * 0.01 * adsk_getTime()), adskUID_rand(float(i+20u) * p.yx * 0.01 * adsk_getTime()));
+        } else if(adskUID_method == 4) {
+            sample = adskUID_halton(i + seed/24u);
         }
 
         // Go!
@@ -206,7 +221,7 @@ vec4 adskUID_lightbox(vec4 i) {
         s = sk1 + (xk - mk1) * (xk - m);
         variance = s/(k-1.0);
         bail++;
-        if((bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/10.0))) break;
+        if((adskUID_method != 0) && (bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
     }
 
     i.rgb = a / float(bail);
