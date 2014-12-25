@@ -169,8 +169,8 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 n = adsk_getNormal();
     vec3 lighttan = adsk_getLightTangent();
     vec3 lightbitan = cross(lighttan, adsk_getLightDirection());
-    float w = adsk_getAreaLightWidth();
-    float h = adsk_getAreaLightHeight();
+    float w = adsk_getAreaLightWidth() * 2.0;
+    float h = adsk_getAreaLightHeight() * 2.0;
     vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
     vec3 b = cross(n, t);
 
