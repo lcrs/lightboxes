@@ -23,6 +23,7 @@ uniform float adskUID_variancelimit;
 uniform bool adskUID_outputvariance;
 uniform bool adskUID_outputsamples;
 uniform int adskUID_method;
+uniform float adskUID_lod;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_sqr(float x) { return x*x; }
@@ -215,7 +216,7 @@ vec4 adskUID_lightbox(vec4 i) {
 
         // Go!
         vec3 l = world2tangent * adskUID_hemi(sample);
-        vec3 env = adsk_getAngularMapIBL(0, adskUID_cylinder(l), 0.0);
+        vec3 env = adsk_getAngularMapIBL(0, adskUID_cylinder(l), adskUID_lod);
         vec3 b = env * adskUID_BRDF(l, v, n, t, b) * dot(n, l);
 
         // Accumulate
