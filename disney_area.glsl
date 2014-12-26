@@ -226,8 +226,8 @@ vec4 adskUID_lightbox(vec4 i) {
         if((adskUID_method != 0) && (bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
     }
 
-    i.rgb = a / float(bail);
-    i.a = 1.0;
+    vec3 thislight = a / float(bail);
+    i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * thislight;
 
     if(adskUID_outputsamples) {
         if(bail == uint(adskUID_minsamples)) i.r = 1.0; else i.r = 0.0;
