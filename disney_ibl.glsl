@@ -37,6 +37,9 @@ float adskUID_roughSqr = adskUID_roughness * adskUID_roughness;
 float adskUID_alphax = max(0.001, adskUID_roughSqr/adskUID_aspect);
 float adskUID_alphay = max(0.001, adskUID_roughSqr*adskUID_aspect);
 float adskUID_alphaG = max(0.001, adskUID_roughSqr);
+float adskUID_coatAlpha = mix(0.1, 0.001, adskUID_clearcoatGloss);
+float adskUID_coatAlphaG = 0.25;
+vec3 adskUID_coatFZ = vec3(0.04);
 
 float adskUID_sqr(float v) {
     return v*v;
@@ -60,7 +63,7 @@ float adskUID_smith_g(float Ndotv, float alphaG) {
 vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n) {
     vec3 nn = normalize(n);
     vec3 un = normalize(v);
-    vec3 vn = normalize(u);
+    vec3 vn = normalize(n);
     vec3 h = normalize(un+vn);
     float udoth = dot(un,h);
     float Ndotu = dot(un,nn);
@@ -119,13 +122,48 @@ vec3 adskUID_spec(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
         float G = 1.0;
         float D = 1.0;
         float tmp = adskUID_sqr(dot(h,xn))/alphaxSqr +
-                    adskUID_sqr(dot(h,xn))/alphaySqr +
+                    adskUID_sqr(dot(h,yn))/alphaySqr +
                     adskUID_sqr(cosTheta);
         D = 1.0 / (tmp*tmp);
         F = F0 + (1.0-F0) * adskUID_schlick_f(a_udoth);
         G = adskUID_smith_g(a_Ndotu, adskUID_alphaG) * adskUID_smith_g(Ndotv, adskUID_alphaG); 
         vec3 eval = F * D * G * Ndotv;
-        eval *= 2.0;
+        eval *= 1.0 / adskUID_luma(refl);
+        return eval;
+    }
+}
+
+vec3 adskUID_coat(vec3 u, vec3 v, vec3 ng) {
+    float alphaSqr = adskUID_coatAlpha*adskUID_coatAlpha;
+    float rho = log(adskUID_coatAlpha)/(-1.0+alphaSqr);
+    vec3 refl = vec3(rho);
+    vec3 n = normalize(ng);
+    vec3 un = normalize(v);
+    vec3 vn = normalize(u);
+    vec3 h = normalize(un+vn);
+    float Ndotu = dot(n,un);
+    float Ndotv = dot(n,vn);
+    float udoth = dot(un,h);
+    float a_udoth = abs(udoth);
+    float a_Ndotu = abs(Ndotu);
+
+    float cosTheta = dot(h,n);
+
+    if(Ndotv <= 0.0 || cosTheta <= 0.0) {
+        return vec3(0.0);
+    } else {
+        vec3 F = vec3(1.0);
+        float G = 1.0;
+        float D = 1.0;
+        float alphaSqrM1 = alphaSqr - 1.0;
+        float cosThetaSqr = cosTheta*cosTheta;
+
+        D = 1.0/(cosThetaSqr*alphaSqrM1+1.0);
+
+        F = adskUID_coatFZ + (1.0-adskUID_coatFZ) * adskUID_schlick_f(a_udoth);
+        G = adskUID_smith_g(a_Ndotu, adskUID_coatAlphaG) * adskUID_smith_g(Ndotv, adskUID_coatAlphaG); 
+        vec3 eval = F * D * G * Ndotv;
+        eval *= 0.25 / adskUID_luma(refl);
         return eval;
     }
 }
@@ -222,12 +260,13 @@ vec4 adskUID_lightbox(vec4 i) {
         // Go!
         vec3 u = world2tangent * adskUID_hemi(sample);
         vec3 env = adsk_getAngularMapIBL(0, adskUID_cylinder(u), adskUID_lod);
-        vec3 b = vec3(0.0);
-        //b += env * adskUID_diffuse(u, v, n);
-        b += env * adskUID_spec(u, v, n, t, b);
+        vec3 light = vec3(0.0);
+        light += env * adskUID_diffuse(u, v, n);
+        light += env * adskUID_spec(u, v, n, t, b);
+        light += env * adskUID_coat(u, v, n);
 
         // Accumulate
-        a += b;
+        a += light;
     }
 
     vec3 thislight = a/float(sn);
