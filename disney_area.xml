@@ -27,6 +27,7 @@
          <PopupEntry Title="Fract noise" Value="3"></PopupEntry>
          <PopupEntry Title="Halton" Value="4"></PopupEntry>
       </Uniform>
+      <Uniform ResDependent="None" Max="20.0" Min="0.0" Default="0.0" Inc="0.1" Tooltip="" Row="1" Col="1" Page="1" Type="float" DisplayName="Mipmap LOD" Name="adskUID_lod"></Uniform>
    </Shader>
    <Page Name="Disney" Page="0">
       <Col Name="Diffuse" Col="0" Page="0"></Col>

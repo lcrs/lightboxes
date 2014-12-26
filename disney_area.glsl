@@ -26,6 +26,7 @@ uniform float adskUID_variancelimit;
 uniform bool adskUID_outputvariance;
 uniform bool adskUID_outputsamples;
 uniform int adskUID_method;
+uniform int adskUID_lod;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_sqr(float x) { return x*x; }
