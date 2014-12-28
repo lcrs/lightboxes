@@ -6,8 +6,14 @@
 //  o rotation control for anisotropic spec
 //  o use uv as tangent space basis when flame bug is fixed
 //  o when area lights are edge on, reduce light intensity
-//  o importance sampling... push samples toward spec peak at least?
+//  o importance sampling... push samples toward spec peak at least? usual technique
+//        won't work because it warps whole hemisphere -> brdf's shape. do we care if pdf doesn't perfectly
+//        match distribution? does it affect more than total light brightness? probably for grazing angles...
 //  o single-sided light option? taken care of by flame's lighting in i.a?
+//  o optimize w/shaderanalyzer...
+//  o noise pattern inside area light, like real softbox?
+//  o diffuse/spec/coat on-off buttons... swap out all in one brdf?
+
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;

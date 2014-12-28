@@ -5,6 +5,18 @@
 // TODO:
 //  o rotation control for anisotropic spec
 //  o use uv as tangent space basis when flame bug is fixed
+//  o get camera rotation via expression link for now
+//  o fix fresnel-like over-important samples - pdf doesn't match sample positions i guess
+//  o diffuse + coat importance sampling
+//  o diffuse, spec, coat on/off buttons
+//  o adaptive degradation levels: on manip, degrade, normal, preview
+//  o adaptive mipmap selection "filtered importantace sampling" from gpu gems 3
+//  o cube maps vs latlongs... mipmaps per face defeat FIS... what's distortion metric for latlongs?
+//  o hijack reflection map texture instead of IBL for speed? no mipmaps in lightbox API...
+//  o can we use another texture for environment importance? how do we combine w/brdf importance?
+//  o optimize, shaderanalyzer
+//  o max color limit for firefly problem... when, where, how much
+//  o confusion between u, v, l inherited from houdini vop code is maddening!
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
@@ -303,19 +315,14 @@ vec4 adskUID_lightbox(vec4 i) {
     // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
 
-    // Accumulator
-    vec3 a = vec3(0.0);
-
-    // Samples we will take
-    uint sn = uint(adskUID_samples);
-
-    for(uint i = 0u; i < sn; i++) {
-        // Generate position for this sample
+    vec3 accum = vec3(0.0);
+    for(uint i = 0u; i < uint(adskUID_samples); i++) {
+        // Generate random position for this sample
         vec2 sample = vec2(0.0, 0.0);
         if(adskUID_method == 0) {
-            sample = adskUID_hammersley(i, sn, seed);
+            sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
         } else if(adskUID_method == 1) {
-            sample = adskUID_hammersley(i, sn, seed);
+            sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
             sample.x = fract(float(adskUID_hash(seed, i))/123456.7); // otherwise x increments regularly
         } else if(adskUID_method == 2) {
             sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
@@ -325,27 +332,22 @@ vec4 adskUID_lightbox(vec4 i) {
             sample = adskUID_halton(i + seed/24u);
         }
 
-        // Go!
+        // Warp it to an important direction
         vec4 importance;
-        vec3 u;
         if(adskUID_importance) {
             importance = adskUID_spec_importance(v, n, t, b, sample);
-            u = importance.xyz;
         } else {
-            importance = vec4(0.0, 0.0, 0.0, 1.0);
-            u = world2tangent * adskUID_hemi(sample);
+            importance = vec4(world2tangent * adskUID_hemi(sample), 1.0);
         }
-        vec3 env = adsk_getAngularMapIBL(0, adskUID_cylinder(u), adskUID_lod);
-        vec3 light = vec3(0.0);
-        //light += env * adskUID_diffuse(u, v, n);
-        light += env * adskUID_spec(u, v, n, t, b);
-        //light += env * adskUID_coat(u, v, n);
-        light = light * importance.a;
-        //light = min(vec3(2.0), light);
-        a += light;
-    }
-    a /= float(sn);
 
-    i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * a;
+        // Sample environment
+        vec3 light = adsk_getAngularMapIBL(0, adskUID_cylinder(importance.xyz), adskUID_lod);
+        vec3 returned = vec3(0.0);
+        returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
+        accum += returned;
+    }
+    accum /= float(uint(adskUID_samples));
+
+    i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * accum;
 	return i;
 }
