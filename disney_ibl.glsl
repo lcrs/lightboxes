@@ -296,11 +296,10 @@ vec3 adskUID_hemi(vec2 uv) {
     return normalize(vec3(cos(phi) * sintheta, sin(phi) * sintheta, costheta));
 }
 
-vec2 adskUID_cylinder(vec3 v) {   
-   const float factor = 1.0 / (2.0 * adskUID_PI);
-   const float offset = -0.25;
-   float x = atan(v.z, v.x ) * factor + offset;
-   return vec2(fract(x), v.y * 0.5 + 0.5);
+vec2 adskUID_latlong(vec3 v) {
+    float lat = asin(v.y) / adskUID_PI + 0.5;
+    float lon = atan(v.z, v.x) / (2.0*adskUID_PI) + 0.75;
+    return fract(vec2(lon, lat));
 }
 
 vec4 adskUID_lightbox(vec4 i) {
@@ -311,6 +310,8 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
     vec3 b = cross(n, t);
     mat3 world2tangent = mat3(t, b, n);
+
+    //return vec4(adsk_getAngularMapIBL(0, adskUID_latlong(reflect(-v, n)), 0.0), 1.0);
 
     // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
@@ -341,7 +342,7 @@ vec4 adskUID_lightbox(vec4 i) {
         }
 
         // Sample environment
-        vec3 light = adsk_getAngularMapIBL(0, adskUID_cylinder(importance.xyz), adskUID_lod);
+        vec3 light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
         vec3 returned = vec3(0.0);
         returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
         accum += returned;
