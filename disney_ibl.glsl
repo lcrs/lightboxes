@@ -159,15 +159,15 @@ vec4 adskUID_spec_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
     vec3 xn = normalize(t);
     vec3 yn = normalize(b);
     mat3 from_rspace = mat3(xn, yn, nn);
-    xn = normalize(from_rspace * xn);
-    yn = normalize(from_rspace * yn);
+    xn = normalize(xn*from_rspace);
+    yn = normalize(yn*from_rspace);
     vec3 F0 = adskUID_CspecFZ;
     float pdf = 0.0;
 
-    vec3 wo = normalize(from_rspace * v);
+    vec3 wo = normalize(v*from_rspace);
 
     vec3 wh = sqrt(s.y/(1.0-s.y)) * (adskUID_alphax*cos(6.28318530717958647692 *s.x)*xn +
-                                     adskUID_alphax*sin(6.28318530717958647692 *s.x)*yn) + 
+                                     adskUID_alphay*sin(6.28318530717958647692 *s.x)*yn) + 
                                      vec3(0.0, 0.0, 1.0);
     wh = normalize(wh);
 
@@ -207,8 +207,8 @@ vec4 adskUID_spec_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
             refl *=  F * G * Ndotv;
             refl /= pdf_h_to_wi * abs(wh.z);
         }
-        vec3 dir = normalize(wi * from_rspace);
-        pdf = 1.0/max(0.1, pdf);
+        vec3 dir = normalize(from_rspace*wi);
+        pdf = 1.0/max(0.01, pdf);
         return vec4(dir, pdf);
     }
 }
@@ -307,11 +307,9 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 p = adsk_getVertexPosition();
     vec3 v = normalize(cam - p);
     vec3 n = adsk_getNormal();
-    vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
+    vec3 t = normalize(cross(n, vec3(1.0, -1.0, 0.0)));
     vec3 b = cross(n, t);
     mat3 world2tangent = mat3(t, b, n);
-
-    //return vec4(adsk_getAngularMapIBL(0, adskUID_latlong(reflect(-v, n)), 0.0), 1.0);
 
     // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
