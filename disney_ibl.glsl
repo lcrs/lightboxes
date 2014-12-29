@@ -58,6 +58,10 @@ float adskUID_sqr(float v) {
     return v*v;
 }
 
+bool adskUID_sameHemisphere(vec3 a, vec3 b) {
+    return (a.z * b.z) > 0.0;
+}
+
 float adskUID_schlick_f(float u) {
     float m = clamp(1.0-u, 0.0, 1.0);
     float m2 = m*m;
@@ -73,7 +77,7 @@ float adskUID_smith_g(float Ndotv, float alphaG) {
     return 1.0/(Ndotv + sqrt(a + b - a*b));
 }
 
-vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n) {
+vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
     vec3 nn = normalize(n);
     vec3 un = normalize(v);
     vec3 vn = normalize(n);
@@ -100,7 +104,7 @@ vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n) {
 
         vec3 eval = mix(Fd, ss, adskUID_subsurface) * adskUID_baseColor + Fsheen;
         eval *= Ndotv;
-        eval *= 2.0;
+        //eval *= 2.0;
         eval *= 1.0 - adskUID_metallic;
         return eval;
     } else {
@@ -108,46 +112,98 @@ vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n) {
     } 
 }
 
+void makebasis(inout vec3 x, inout vec3 y, vec3 z) {
+        if (abs(z.x) < 0.6)
+                y = vec3(1.0, 0.0, 0.0);
+        else if (abs(z.z) < 0.6)
+                y = vec3(0.0, 1.0, 0.0);
+        else
+                y = vec3(0.0, 0.0, 1.0);
+        x = normalize(cross(y,z));
+        y = cross(z,x);
+}
+
+void makebasis(inout vec3 x, inout vec3 y, vec3 z, vec3 u) {
+    x = normalize(cross(z,u));
+    if (length(x) == 0.0)
+        makebasis(x,y,z);
+    else
+        y = cross(z,x);
+}
+
+vec4 adskUID_diffuse_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
+    vec3 refl;
+    vec3 dir = vec3(cos(s.x*6.28318530717958647692), sin(s.x*6.28318530717958647692), 0);
+    dir *= sqrt(s.y);
+    dir.z = sqrt(1.0-s.y);
+
+    float pdf = 2.0*dir.z;
+
+    vec3 framex = vec3(0.0);
+    vec3 framey = vec3(0.0);
+    makebasis(framex, framey, n, v);
+
+    dir = dir.x*framex + dir.y*framey + dir.z*n;
+
+    vec3 un = normalize(v);
+    vec3 vn = normalize(dir);
+
+    if ( dot(n,vn) > 0.0 ) {
+
+        vec3 h = normalize(v+dir);
+        float udoth = dot(un,h);
+        float Ndotu = dot(un,n);
+        float Ndotv = dot(vn,n);
+        float a_udoth = abs(udoth);
+        float a_Ndotu = abs(Ndotu);
+        float tmp = udoth*udoth*adskUID_roughness;
+
+        float Fd90 = 0.5 + 2.0*tmp;
+        float FV = adskUID_schlick_f(a_Ndotu);
+        float FL = adskUID_schlick_f(Ndotv);
+        float Fd = mix(1.0, Fd90, FL) * mix(1.0, Fd90, FV);
+
+        float Fss90 = tmp;
+        float Fss = mix(1.0, Fss90, FL) * mix(1.0, Fss90, FV);
+        float ss = 1.25 * (Fss * (1.0/(a_Ndotu+Ndotv)-0.5) + 0.5);
+
+        float FH = adskUID_schlick_f(a_udoth);
+        vec3 Fsheen = FH * adskUID_diff_sheen;
+
+        refl = vec3(0.5);
+        refl *= mix(Fd, ss, adskUID_subsurface) * adskUID_baseColor + Fsheen;
+    } else {
+        pdf = 0.0;
+        refl = vec3(0.0);
+    }
+    pdf = 1.0/max(0.01, pdf);
+    return vec4(dir, pdf);
+}
+
 vec3 adskUID_spec(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
     float alphaxSqr = adskUID_alphax*adskUID_alphax;
     float alphaySqr = adskUID_alphay*adskUID_alphay;
     float rho = 0.5*(adskUID_alphax*adskUID_alphay);
     vec3 refl = vec3(rho);
-    vec3 nn = normalize(n);
-    vec3 xn = normalize(t);
-    vec3 yn = normalize(b);
-    vec3 un = normalize(v);
-    vec3 vn = normalize(u);
-    vec3 h = normalize(un+vn);
-    float Ndotu = dot(nn,un);
-    float Ndotv = dot(nn,vn);
-    float udoth = dot(un,h);
+    vec3 h = normalize(u+v);
+    float Ndotu = dot(n,v);
+    float Ndotv = dot(n,u);
+    float udoth = dot(v,h);
     float a_udoth = abs(udoth);
     float a_Ndotu = abs(Ndotu);
-    vec3 F0 = adskUID_CspecFZ;
-
-    float cosTheta = dot(h,nn);
+    float cosTheta = dot(h,n);
 
     if(Ndotv <= 0.0 || cosTheta <= 0.0) {
         return vec3(0.0);
     } else {
-        vec3 F = vec3(1.0);
-        float G = 1.0;
-        float D = 1.0;
-        float tmp = adskUID_sqr(dot(h,xn))/alphaxSqr +
-                    adskUID_sqr(dot(h,yn))/alphaySqr +
-                    adskUID_sqr(cosTheta);
-        D = 1.0 / (tmp*tmp);
-        F = F0 + (1.0-F0) * adskUID_schlick_f(a_udoth);
-        G = adskUID_smith_g(a_Ndotu, adskUID_alphaG) * adskUID_smith_g(Ndotv, adskUID_alphaG); 
+        float tmp = adskUID_sqr(dot(h,t))/alphaxSqr + adskUID_sqr(dot(h,b))/alphaySqr + adskUID_sqr(cosTheta);
+        float D = 1.0 / (tmp*tmp);
+        vec3 F = adskUID_CspecFZ + (1.0-adskUID_CspecFZ) * adskUID_schlick_f(a_udoth);
+        float G = adskUID_smith_g(a_Ndotu, adskUID_alphaG) * adskUID_smith_g(Ndotv, adskUID_alphaG); 
         vec3 eval = F * D * G * Ndotv;
         eval *= 1.0 / adskUID_luma(refl);
         return eval;
     }
-}
-
-bool adskUID_sameHemisphere(vec3 w, vec3 wp) {
-    return (w.z * wp.z) > 0.0;
 }
 
 vec4 adskUID_spec_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
@@ -307,7 +363,7 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 p = adsk_getVertexPosition();
     vec3 v = normalize(cam - p);
     vec3 n = adsk_getNormal();
-    vec3 t = normalize(cross(n, vec3(1.0, -1.0, 0.0)));
+    vec3 t = normalize(cross(n, vec3(1.0, -1.0, 0.0))); // constant tangent basis - geo tangents currently broken in Flame
     vec3 b = cross(n, t);
     mat3 world2tangent = mat3(t, b, n);
 
@@ -317,7 +373,7 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 accum = vec3(0.0);
     for(uint i = 0u; i < uint(adskUID_samples); i++) {
         // Generate random position for this sample
-        vec2 sample = vec2(0.0, 0.0);
+        vec2 sample;
         if(adskUID_method == 0) {
             sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
         } else if(adskUID_method == 1) {
@@ -331,18 +387,22 @@ vec4 adskUID_lightbox(vec4 i) {
             sample = adskUID_halton(i + seed/24u);
         }
 
-        // Warp it to an important direction
-        vec4 importance;
-        if(adskUID_importance) {
-            importance = adskUID_spec_importance(v, n, t, b, sample);
-        } else {
-            importance = vec4(world2tangent * adskUID_hemi(sample), 1.0);
-        }
-
-        // Sample environment
-        vec3 light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+        vec3 light = vec3(0.0);
         vec3 returned = vec3(0.0);
-        returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
+
+        // Default uniform hemisphere sampling
+        vec4 importance = vec4(world2tangent * adskUID_hemi(sample), 1.0);
+
+        // Diffuse - warp to important direction, sample, multiply by BRDF and importance, accumulate
+        if(adskUID_importance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
+        light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+        returned += light * adskUID_diffuse(importance.xyz, v, n, t, b) * importance.a;
+
+        // Spec    - warp to important direction, sample, multiply by BRDF and importance, accumulate
+        //if(adskUID_importance) importance = adskUID_spec_importance(v, n, t, b, sample);
+        //light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+        //returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
+
         accum += returned;
     }
     accum /= float(uint(adskUID_samples));
