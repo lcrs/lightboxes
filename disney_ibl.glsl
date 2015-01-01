@@ -31,9 +31,9 @@ uniform float adskUID_clearcoatGloss;
 uniform float adskUID_anisotropic;
 uniform bool adskUID_diffuseon, adskUID_specon, adskUID_coaton;
 uniform int adskUID_samples;
-uniform bool adskUID_importance;
+uniform bool adskUID_diffuseimportance, adskUID_specimportance, adskUID_coatimportance;
+uniform float adskUID_diffuselod, adskUID_speclod, adskUID_coatlod;
 uniform int adskUID_method;
-uniform float adskUID_lod;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_luma(vec3 c) { 
@@ -433,8 +433,11 @@ vec4 adskUID_lightbox(vec4 i) {
 
     vec3 accum = vec3(0.0);
     for(uint i = 0u; i < uint(adskUID_samples); i++) {
-        // Generate random position for this sample
         vec2 sample;
+        vec3 light;
+        vec3 returned = vec3(0.0);
+
+        // Generate random position for this sample
         if(adskUID_method == 0) {
             sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
         } else if(adskUID_method == 1) {
@@ -448,28 +451,23 @@ vec4 adskUID_lightbox(vec4 i) {
             sample = adskUID_halton(i + seed/24u);
         }
 
-        vec3 light = vec3(0.0);
-        vec3 returned = vec3(0.0);
-
         // Default uniform hemisphere sampling
         vec4 importance = vec4(world2tangent * adskUID_hemi(sample), 1.0);
 
-        // Diffuse - warp to important direction, sample, multiply by BRDF and importance, accumulate
+        // For diffuse/spec/coat: warp to important direction, sample, multiply by BRDF and importance, accumulate
         if(adskUID_diffuseon) {
-            if(adskUID_importance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            if(adskUID_diffuseimportance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_diffuselod);
             returned += light * adskUID_diffuse(importance.xyz, v, n, t, b) * importance.a;
         }
-        // Spec - warp to important direction, sample, multiply by BRDF and importance, accumulate
         if(adskUID_specon) {
-            if(adskUID_importance) importance = adskUID_spec_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            if(adskUID_specimportance) importance = adskUID_spec_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_speclod);
             returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
         }
-        // Coat - warp to important direction, sample, multiply by BRDF and importance, accumulate
         if(adskUID_coaton) {
-            if(adskUID_importance) importance = adskUID_coat_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            if(adskUID_coatimportance) importance = adskUID_coat_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_coatlod);
             returned += light * adskUID_coat(importance.xyz, v, n) * importance.a;
         }
 
