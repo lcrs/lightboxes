@@ -24,11 +24,12 @@ uniform float adskUID_roughness;
 uniform float adskUID_subsurface;
 uniform float adskUID_specular;
 uniform float adskUID_specularTint;
-uniform float adskUID_anisotropic;
 uniform float adskUID_sheen;
 uniform float adskUID_sheenTint;
 uniform float adskUID_clearcoat;
 uniform float adskUID_clearcoatGloss;
+uniform float adskUID_anisotropic;
+uniform bool adskUID_diffuseon, adskUID_specon, adskUID_coaton;
 uniform int adskUID_samples;
 uniform bool adskUID_importance;
 uniform int adskUID_method;
@@ -104,7 +105,7 @@ vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
 
         vec3 eval = mix(Fd, ss, adskUID_subsurface) * adskUID_baseColor + Fsheen;
         eval *= Ndotv;
-        //eval *= 2.0;
+        // eval *= 2.0;  // this should be active in theory but doesn't match houdini...
         eval *= 1.0 - adskUID_metallic;
         return eval;
     } else {
@@ -112,7 +113,68 @@ vec3 adskUID_diffuse(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
     } 
 }
 
-void makebasis(inout vec3 x, inout vec3 y, vec3 z) {
+vec3 adskUID_spec(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
+    float alphaxSqr = adskUID_alphax*adskUID_alphax;
+    float alphaySqr = adskUID_alphay*adskUID_alphay;
+    float rho = 0.5*(adskUID_alphax*adskUID_alphay);
+    vec3 refl = vec3(rho);
+    vec3 h = normalize(u+v);
+    float Ndotu = dot(n,v);
+    float Ndotv = dot(n,u);
+    float udoth = dot(v,h);
+    float a_udoth = abs(udoth);
+    float a_Ndotu = abs(Ndotu);
+    float cosTheta = dot(h,n);
+
+    if(Ndotv <= 0.0 || cosTheta <= 0.0) {
+        return vec3(0.0);
+    } else {
+        float tmp = adskUID_sqr(dot(h,t))/alphaxSqr + adskUID_sqr(dot(h,b))/alphaySqr + adskUID_sqr(cosTheta);
+        float D = 1.0 / (tmp*tmp);
+        vec3 F = adskUID_CspecFZ + (1.0-adskUID_CspecFZ) * adskUID_schlick_f(a_udoth);
+        float G = adskUID_smith_g(a_Ndotu, adskUID_alphaG) * adskUID_smith_g(Ndotv, adskUID_alphaG); 
+        vec3 eval = F * D * G * Ndotv;
+        eval *= 1.0 / adskUID_luma(refl);
+        return eval;
+    }
+}
+
+vec3 adskUID_coat(vec3 u, vec3 v, vec3 ng) {
+    float alphaSqr = adskUID_coatAlpha*adskUID_coatAlpha;
+    float rho = log(adskUID_coatAlpha)/(-1.0+alphaSqr);
+    vec3 refl = vec3(rho);
+    vec3 n = normalize(ng);
+    vec3 un = normalize(v);
+    vec3 vn = normalize(u);
+    vec3 h = normalize(un+vn);
+    float Ndotu = dot(n,un);
+    float Ndotv = dot(n,vn);
+    float udoth = dot(un,h);
+    float a_udoth = abs(udoth);
+    float a_Ndotu = abs(Ndotu);
+
+    float cosTheta = dot(h,n);
+
+    if(Ndotv <= 0.0 || cosTheta <= 0.0) {
+        return vec3(0.0);
+    } else {
+        vec3 F = vec3(1.0);
+        float G = 1.0;
+        float D = 1.0;
+        float alphaSqrM1 = alphaSqr - 1.0;
+        float cosThetaSqr = cosTheta*cosTheta;
+
+        D = 1.0/(cosThetaSqr*alphaSqrM1+1.0);
+
+        F = adskUID_coatFZ + (1.0-adskUID_coatFZ) * adskUID_schlick_f(a_udoth);
+        G = adskUID_smith_g(a_Ndotu, adskUID_coatAlphaG) * adskUID_smith_g(Ndotv, adskUID_coatAlphaG); 
+        vec3 eval = F * D * G * Ndotv;
+        eval *= 0.25 / adskUID_luma(refl);
+        return eval;
+    }
+}
+
+void adskUID_makebasis(inout vec3 x, inout vec3 y, vec3 z) {
         if (abs(z.x) < 0.6)
                 y = vec3(1.0, 0.0, 0.0);
         else if (abs(z.z) < 0.6)
@@ -123,10 +185,10 @@ void makebasis(inout vec3 x, inout vec3 y, vec3 z) {
         y = cross(z,x);
 }
 
-void makebasis(inout vec3 x, inout vec3 y, vec3 z, vec3 u) {
+void adskUID_makebasis(inout vec3 x, inout vec3 y, vec3 z, vec3 u) {
     x = normalize(cross(z,u));
     if (length(x) == 0.0)
-        makebasis(x,y,z);
+        adskUID_makebasis(x,y,z);
     else
         y = cross(z,x);
 }
@@ -141,14 +203,14 @@ vec4 adskUID_diffuse_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
 
     vec3 framex = vec3(0.0);
     vec3 framey = vec3(0.0);
-    makebasis(framex, framey, n, v);
+    adskUID_makebasis(framex, framey, n, v);
 
     dir = dir.x*framex + dir.y*framey + dir.z*n;
 
     vec3 un = normalize(v);
     vec3 vn = normalize(dir);
 
-    if ( dot(n,vn) > 0.0 ) {
+    if (dot(n,vn) > 0.0) {
 
         vec3 h = normalize(v+dir);
         float udoth = dot(un,h);
@@ -178,32 +240,6 @@ vec4 adskUID_diffuse_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
     }
     pdf = 1.0/max(0.01, pdf);
     return vec4(dir, pdf);
-}
-
-vec3 adskUID_spec(vec3 u, vec3 v, vec3 n, vec3 t, vec3 b) {
-    float alphaxSqr = adskUID_alphax*adskUID_alphax;
-    float alphaySqr = adskUID_alphay*adskUID_alphay;
-    float rho = 0.5*(adskUID_alphax*adskUID_alphay);
-    vec3 refl = vec3(rho);
-    vec3 h = normalize(u+v);
-    float Ndotu = dot(n,v);
-    float Ndotv = dot(n,u);
-    float udoth = dot(v,h);
-    float a_udoth = abs(udoth);
-    float a_Ndotu = abs(Ndotu);
-    float cosTheta = dot(h,n);
-
-    if(Ndotv <= 0.0 || cosTheta <= 0.0) {
-        return vec3(0.0);
-    } else {
-        float tmp = adskUID_sqr(dot(h,t))/alphaxSqr + adskUID_sqr(dot(h,b))/alphaySqr + adskUID_sqr(cosTheta);
-        float D = 1.0 / (tmp*tmp);
-        vec3 F = adskUID_CspecFZ + (1.0-adskUID_CspecFZ) * adskUID_schlick_f(a_udoth);
-        float G = adskUID_smith_g(a_Ndotu, adskUID_alphaG) * adskUID_smith_g(Ndotv, adskUID_alphaG); 
-        vec3 eval = F * D * G * Ndotv;
-        eval *= 1.0 / adskUID_luma(refl);
-        return eval;
-    }
 }
 
 vec4 adskUID_spec_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
@@ -269,38 +305,63 @@ vec4 adskUID_spec_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
     }
 }
 
-vec3 adskUID_coat(vec3 u, vec3 v, vec3 ng) {
+vec3 adskUID_sphericalDirection(float sinTheta, float cosTheta, float phi) {
+    return vec3(sinTheta*cos(phi), sinTheta*sin(phi), cosTheta);
+}
+
+vec4 adskUID_coat_importance(vec3 v, vec3 n, vec3 t, vec3 b, vec2 s) {
     float alphaSqr = adskUID_coatAlpha*adskUID_coatAlpha;
     float rho = log(adskUID_coatAlpha)/(-1.0+alphaSqr);
     vec3 refl = vec3(rho);
-    vec3 n = normalize(ng);
-    vec3 un = normalize(v);
-    vec3 vn = normalize(u);
-    vec3 h = normalize(un+vn);
-    float Ndotu = dot(n,un);
-    float Ndotv = dot(n,vn);
-    float udoth = dot(un,h);
-    float a_udoth = abs(udoth);
-    float a_Ndotu = abs(Ndotu);
+    vec3 framex = vec3(0.0);
+    vec3 framey = vec3(0.0);
+    adskUID_makebasis(framex, framey, n, v);
+    mat3 from_rspace = mat3(framex, framey, n);
+    vec3 F0 = adskUID_coatFZ;
+    float pdf = 0.0;
 
-    float cosTheta = dot(h,n);
+    vec3 wo = normalize(v*from_rspace);
 
-    if(Ndotv <= 0.0 || cosTheta <= 0.0) {
-        return vec3(0.0);
-    } else {
-        vec3 F = vec3(1.0);
-        float G = 1.0;
-        float D = 1.0;
-        float alphaSqrM1 = alphaSqr - 1.0;
-        float cosThetaSqr = cosTheta*cosTheta;
+    float cosThetaSqr = 1.0/(1.0-alphaSqr);
+    cosThetaSqr *= 1.0-pow(alphaSqr, s.x);
+    float cosTheta = sqrt(cosThetaSqr);
+    float sinTheta = sqrt(max(0.0,1.0-cosThetaSqr));
+    float phi = s.y * 6.28318530717958647692;
+    vec3 wh = adskUID_sphericalDirection(sinTheta, cosTheta, phi);
 
-        D = 1.0/(cosThetaSqr*alphaSqrM1+1.0);
+    if(!adskUID_sameHemisphere(wo,wh)) {
+            wh = -wh;
+    }
 
-        F = adskUID_coatFZ + (1.0-adskUID_coatFZ) * adskUID_schlick_f(a_udoth);
-        G = adskUID_smith_g(a_Ndotu, adskUID_coatAlphaG) * adskUID_smith_g(Ndotv, adskUID_coatAlphaG); 
-        vec3 eval = F * D * G * Ndotv;
-        eval *= 0.25 / adskUID_luma(refl);
-        return eval;
+    if ( wh.z > 0.0 ) {
+        vec3 wi = 2.0*dot(wo,wh)*wh - wo;
+
+        if (wi.z <= 0.0 ) {
+            pdf = 0.0;
+            refl = vec3(0.0);
+        } else {
+            float Ndotu = wo.z;
+            float Ndotv = wi.z;
+            float udoth = dot(wo,wh);
+            float a_Ndotu = abs(Ndotu);
+            float a_udoth = abs(udoth);
+            float pdf_h_to_wi = 1.0 / (4.0*a_udoth);
+
+            float D = 1.0;
+            float alphaSqrM1 = alphaSqr - 1.0;
+            D = 1.0 / (cosThetaSqr*alphaSqrM1+1.0);
+
+            pdf = D * wh.z;
+            pdf /= rho;
+            pdf *= pdf_h_to_wi;
+            vec3 F = F0 + (1.0-F0) * adskUID_schlick_f(a_udoth);
+            float G = adskUID_smith_g(a_Ndotu, adskUID_coatAlphaG) * adskUID_smith_g(Ndotv, adskUID_coatAlphaG);
+            refl *= F * G * Ndotv;
+            refl /= pdf_h_to_wi * wh.z;
+        }
+        vec3 dir = normalize(from_rspace*wi);
+        pdf = 1.0/max(0.01, pdf);
+        return vec4(dir, pdf);
     }
 }
 
@@ -394,14 +455,23 @@ vec4 adskUID_lightbox(vec4 i) {
         vec4 importance = vec4(world2tangent * adskUID_hemi(sample), 1.0);
 
         // Diffuse - warp to important direction, sample, multiply by BRDF and importance, accumulate
-        if(adskUID_importance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
-        light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
-        returned += light * adskUID_diffuse(importance.xyz, v, n, t, b) * importance.a;
-
-        // Spec    - warp to important direction, sample, multiply by BRDF and importance, accumulate
-        //if(adskUID_importance) importance = adskUID_spec_importance(v, n, t, b, sample);
-        //light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
-        //returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
+        if(adskUID_diffuseon) {
+            if(adskUID_importance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            returned += light * adskUID_diffuse(importance.xyz, v, n, t, b) * importance.a;
+        }
+        // Spec - warp to important direction, sample, multiply by BRDF and importance, accumulate
+        if(adskUID_specon) {
+            if(adskUID_importance) importance = adskUID_spec_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
+        }
+        // Coat - warp to important direction, sample, multiply by BRDF and importance, accumulate
+        if(adskUID_coaton) {
+            if(adskUID_importance) importance = adskUID_coat_importance(v, n, t, b, sample);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_lod);
+            returned += light * adskUID_coat(importance.xyz, v, n) * importance.a;
+        }
 
         accum += returned;
     }
