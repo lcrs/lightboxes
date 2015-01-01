@@ -5,18 +5,15 @@
 // TODO:
 //  o rotation control for anisotropic spec
 //  o use uv as tangent space basis when flame bug is fixed
-//  o get camera rotation via expression link for now
-//  o fix fresnel-like over-important samples - pdf doesn't match sample positions i guess
-//  o diffuse + coat importance sampling
-//  o diffuse, spec, coat on/off buttons
+//  o get camera rotation via expression link for now? does env rotation matrix do this?
 //  o adaptive degradation levels: on manip, degrade, normal, preview
-//  o adaptive mipmap selection "filtered importantace sampling" from gpu gems 3
+//  o adaptive mipmap selection "filtered importantace sampling" from gpu gems 3?
+//  o at least adapt mipmap LOD when roughness is turned up?
 //  o cube maps vs latlongs... mipmaps per face defeat FIS... what's distortion metric for latlongs?
-//  o hijack reflection map texture instead of IBL for speed? no mipmaps in lightbox API...
 //  o can we use another texture for environment importance? how do we combine w/brdf importance?
 //  o optimize, shaderanalyzer
 //  o max color limit for firefly problem... when, where, how much
-//  o confusion between u, v, l inherited from houdini vop code is maddening!
+//  o spec/coat multipliers don't seem to do much?
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
@@ -34,6 +31,7 @@ uniform int adskUID_samples;
 uniform bool adskUID_diffuseimportance, adskUID_specimportance, adskUID_coatimportance;
 uniform float adskUID_diffuselod, adskUID_speclod, adskUID_coatlod;
 uniform int adskUID_method;
+uniform vec3 adskUID_camrot;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_luma(vec3 c) { 
@@ -413,7 +411,26 @@ vec3 adskUID_hemi(vec2 uv) {
     return normalize(vec3(cos(phi) * sintheta, sin(phi) * sintheta, costheta));
 }
 
+// Degrees to radians
+float adskUID_deg2rad(float angle) {
+    return(angle/(180.0/adskUID_PI));
+}
+
+// Rotates in ZXY order
+vec3 adskUID_rotate(vec3 p, vec3 angles) {
+    float x = adskUID_deg2rad(angles.x);
+    float y = adskUID_deg2rad(angles.y);
+    float z = adskUID_deg2rad(angles.z);
+    mat3 rx = mat3(1.0, 0.0, 0.0, 0.0, cos(x), sin(x), 0.0, -sin(x), cos(x));
+    mat3 ry = mat3(cos(y), 0.0, -sin(y), 0.0, 1.0, 0.0, sin(y), 0.0, cos(y));
+    mat3 rz = mat3(cos(z), sin(z), 0.0, -sin(z), cos(z), 0.0, 0.0, 0.0, 1.0);
+    mat3 r = ry * rx * rz;
+    return(p * r);
+}
+
 vec2 adskUID_latlong(vec3 v) {
+    // Bodge: rotate by opposite of camera rotation
+    v = adskUID_rotate(v, adskUID_camrot);
     float lat = asin(v.y) / adskUID_PI + 0.5;
     float lon = atan(v.z, v.x) / (2.0*adskUID_PI) + 0.75;
     return fract(vec2(lon, lat));
