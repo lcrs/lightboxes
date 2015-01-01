@@ -13,7 +13,7 @@
 //  o optimize w/shaderanalyzer...
 //  o noise pattern inside area light, like real softbox?
 //  o diffuse/spec/coat on-off buttons... swap out all in one brdf?
-
+//  o all-in-one BRDF may not match spit out diff/spec/coat in IBL shader
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
@@ -26,13 +26,9 @@ uniform float adskUID_sheen;
 uniform float adskUID_sheenTint;
 uniform float adskUID_clearcoat;
 uniform float adskUID_clearcoatGloss;
-uniform int adskUID_minsamples;
-uniform int adskUID_maxsamples;
-uniform float adskUID_variancelimit;
-uniform bool adskUID_outputvariance;
-uniform bool adskUID_outputsamples;
+uniform bool adskUID_diffuseon, adskUID_specon, adskUID_coaton;
+uniform int adskUID_samples;
 uniform int adskUID_method;
-uniform int adskUID_lod;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_sqr(float x) { return x*x; }
@@ -119,9 +115,12 @@ vec3 adskUID_BRDF( vec3 L, vec3 V, vec3 N, vec3 X, vec3 Y )
     float Fr = mix(0.04, 1.0, FH);
     float Gr = adskUID_smithG_GGX(NdotL, 0.25) * adskUID_smithG_GGX(NdotV, 0.25);
 
-    return ((1.0/adskUID_PI) * mix(Fd, ss, adskUID_subsurface)*Cdlin + Fsheen)
-        * (1.0-adskUID_metallic)
-        + Gs*Fs*Ds + 0.25*adskUID_clearcoat*Gr*Fr*Dr;
+    vec3 accum = vec3(0.0);
+    if(adskUID_diffuseon) accum += (mix(Fd, ss, adskUID_subsurface)*Cdlin + Fsheen) * (1.0-adskUID_metallic);
+    if(adskUID_specon) accum += Gs*Fs*Ds;
+    if(adskUID_coaton) accum += 0.25*adskUID_clearcoat*Gr*Fr*Dr;
+    accum *= 1.0/adskUID_PI;
+    return accum;
 }
 
 uint adskUID_hash(uint x, uint y) {
@@ -178,7 +177,7 @@ vec4 adskUID_lightbox(vec4 i) {
     vec3 lightbitan = cross(lighttan, adsk_getLightDirection());
     float w = adsk_getAreaLightWidth() * 2.0;
     float h = adsk_getAreaLightHeight() * 2.0;
-    vec3 t = cross(n, vec3(0.0, 1.0, 0.0));
+    vec3 t = normalize(cross(n, vec3(1.0, -1.0, 0.0))); // constant tangent basis - geo tangents currently broken in Flame
     vec3 b = cross(n, t);
 
     // Per-fragment seed to decorrelate sampling pattern
@@ -186,23 +185,13 @@ vec4 adskUID_lightbox(vec4 i) {
 
     // Accumulator
     vec3 a = vec3(0.0);
-
-    // Max samples we will ever take
-    uint sn = uint(adskUID_maxsamples);
-
-    // How many samples we actually take to get a good low variance
-    uint bail = 0u;
-
-    // State variables for continuous variance calculation
-    float m = 0.0, s = 0.0, variance = 0.0;
-
-    for(uint i = 0u; i < sn; i++) {
+    for(uint i = 0u; i < uint(adskUID_samples); i++) {
         // Generate position on area light for this sample
         vec2 sample = vec2(0.0, 0.0);
         if(adskUID_method == 0) {
-            sample = adskUID_hammersley(i, sn, seed);
+            sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
         } else if(adskUID_method == 1) {
-            sample = adskUID_hammersley(i, sn, seed);
+            sample = adskUID_hammersley(i, uint(adskUID_samples), seed);
             sample.x = fract(float(adskUID_hash(seed, i))/123456.7); // otherwise x increments regularly
         } else if(adskUID_method == 2) {
             sample = fract(vec2(adskUID_hash(i, seed), adskUID_hash(i+1u, seed)) * 2.3283064365386963e-10);
@@ -220,28 +209,10 @@ vec4 adskUID_lightbox(vec4 i) {
 
         // Accumulate
         a += b;
-
-        // Update variance
-        float mk1 = m;
-        float sk1 = s;
-        float k = float(i);
-        float xk = adskUID_luma(pow(b, vec3(1.0/2.4))); // Perceptual weighting, luma of gamma'd colour
-        if(i == 0u) m = xk; else m = mk1 + (xk - mk1)/k;
-        s = sk1 + (xk - mk1) * (xk - m);
-        variance = s/(k-1.0);
-        bail++;
-        if((adskUID_method != 0) && (bail >= uint(adskUID_minsamples)) && (variance < (adskUID_variancelimit/100.0))) break;
     }
 
-    vec3 thislight = a / float(bail);
+    vec3 thislight = a / float(adskUID_samples);
     i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * thislight;
-
-    if(adskUID_outputsamples) {
-        if(bail == uint(adskUID_minsamples)) i.r = 1.0; else i.r = 0.0;
-        if(bail == uint(adskUID_maxsamples)) i.b = 1.0; else i.b = 0.0;
-        i.g = float(bail)/100.0;
-    }
-    if(adskUID_outputvariance) i.rgb = vec3(variance);
 
 	return i;
 }
