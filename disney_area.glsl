@@ -14,6 +14,7 @@
 //  o noise pattern inside area light, like real softbox?
 //  o diffuse/spec/coat on-off buttons... swap out all in one brdf?
 //  o all-in-one BRDF may not match spit out diff/spec/coat in IBL shader
+//  o adapt to deal as best as possible with Material node params and shadows, maybe hijacked Specular map
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;
