@@ -5,7 +5,7 @@
 // TODO:
 //  o rotation control for anisotropic spec
 //  o use uv as tangent space basis when flame bug is fixed
-//  o get camera rotation via expression link for now? does env rotation matrix do this?
+//  o get camera rotation from light direction or camera-light vector, expression link is stupid
 //  o adaptive degradation levels: on manip, degrade, normal, preview
 //  o adaptive mipmap selection "filtered importantace sampling" from gpu gems 3?
 //  o at least adapt mipmap LOD when roughness is turned up?
