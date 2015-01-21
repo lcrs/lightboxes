@@ -15,6 +15,7 @@
 //  o max color limit for firefly problem... when, where, how much
 //  o spec/coat multipliers don't seem to do much?
 //  o adapt to deal as best as possible with Material node params and shadows, maybe hijacked Specular map
+//  o reversed normals/double-sided rendering
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;

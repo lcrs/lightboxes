@@ -15,6 +15,7 @@
 //  o diffuse/spec/coat on-off buttons... swap out all in one brdf?
 //  o all-in-one BRDF may not match spit out diff/spec/coat in IBL shader
 //  o adapt to deal as best as possible with Material node params and shadows, maybe hijacked Specular map
+//  o reversed normals / double-sided rendering
 
 uniform vec3 adskUID_baseColor;
 uniform float adskUID_metallic;

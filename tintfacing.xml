@@ -1,0 +1,16 @@
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="" Name="Tint Facing">
+   <Shader OutputBitDepth="Output" Index="1">
+      <Uniform Inc="0.1" Tooltip="" Row="0" Col="0" Page="0" IconType="None" ValueType="ColourWheel" Type="vec3" DisplayName="Colour Wheel" Name="adskUID_col" HueShift="False" AngleName="Hue" IntensityName1="Saturation" IntensityName2="Value">
+         <SubUniform ResDependent="None" Max="1000.0" Min="-1000.0" Default="270.0">
+         </SubUniform>
+         <SubUniform ResDependent="None" Max="1000.0" Min="-1000.0" Default="50.0">
+         </SubUniform>
+         <SubUniform ResDependent="None" Max="100.0" Min="0.0" Default="100.0">
+         </SubUniform>
+      </Uniform>
+   </Shader>
+   <Page Name="Tint" Page="0">
+      <Col Name="Tint" Col="0" Page="0">
+      </Col>
+   </Page>
+</ShaderNodePreset>
