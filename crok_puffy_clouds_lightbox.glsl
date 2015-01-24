@@ -1,17 +1,28 @@
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// Re-jigged for Matchbox by Ivar
+// Further re-jigged for Lightbox by Lewis
+// TODO:
+//  o stochastic sampling to get rid of lines
+//  o trace area around origin instead of around camera
+//  o size of traced area, step size controls
+
 
 vec3 adsk_getVertexPosition();
 vec3 adsk_getCameraPosition();
 vec3 adsk_getLightPosition();
+vec3 adsk_getLightDirection();
+vec3 adsk_getLightTangent();
 mat4 adsk_getModelViewMatrix();
 mat4 adsk_getModelViewInverseMatrix();
+vec3 adsk_getComputedDiffuse();
 float adsk_getTime();
 
 uniform vec2 adskUID_paramPos;
 uniform float adskUID_paramSpeed;
 uniform bool adskUID_paramProcedural;
 uniform int adskUID_steps;
+uniform float adskUID_far;
 
 uniform float adskUID_Detail;
 uniform float adskUID_Density;
@@ -62,7 +73,7 @@ vec4 map( in vec3 p )
 vec3 sundir = vec3(-1.0,0.0,0.0);
 
 
-vec4 raymarch( in vec3 ro, in vec3 rd )
+vec4 raymarch( in vec3 ro, in vec3 rd, float z )
 {
 	vec4 sum = vec4(0, 0, 0, 0);
 
@@ -72,25 +83,28 @@ vec4 raymarch( in vec3 ro, in vec3 rd )
 		if( sum.a > 0.99 ) continue;
 
 		vec3 pos = ro + t*rd;
+
+		if(t > z) {
+			// We've gone beyond our geo depth!
+			// Comp the sum so far over the geo
+			vec3 bg = adsk_getComputedDiffuse();
+			vec3 comp = bg * (1.0 - sum.a) + sum.rgb;
+
+			return vec4(comp, 1.0);
+		}
+
 		vec4 col = map( pos );
 		
-		#if 1
 		float dif =  clamp((col.w - map(pos+0.3*sundir).w)/0.6, 0.0, 1.0 );
-
         vec3 lin = vec3(0.65,0.68,0.7)*1.35 + 0.45*vec3(0.7, 0.5, 0.3)*dif;
 		col.xyz *= lin;
-		#endif
 		
 		col.a *= 0.35;
 		col.rgb *= col.a;
 
 		sum = sum + col*(1.0 - sum.a);	
 
-        #if 0
-		t += 0.1;
-		#else
-		t += max(0.1,0.025*t);
-		#endif
+        t += max(0.1,0.025*t);
 	}
 
 	sum.xyz /= (0.001+sum.w);
@@ -100,15 +114,25 @@ vec4 raymarch( in vec3 ro, in vec3 rd )
 
 vec4 adskUID_lightbox(vec4 i)
 {
-    vec4 camera = adsk_getModelViewInverseMatrix() * vec4(adsk_getCameraPosition(), 1.0);
-    vec4 vertex = adsk_getModelViewInverseMatrix() * vec4(adsk_getVertexPosition(), 1.0);
-    vec3 dir = normalize(vertex.xyz - camera.xyz);
-    //camera.y += 200.0;
-    //camera.z += 600.0;
-    vec3 ro = camera.xyz;
-	vec3 rd = dir;
+    vec3 camera = adsk_getCameraPosition();
+    vec3 vertex = adsk_getVertexPosition();
+    vec3 light = -adsk_getLightPosition();
+    vec3 lightdir = adsk_getLightDirection();
+    vec3 lighttan = adsk_getLightTangent();
+    vec3 lightbitan = cross(lightdir, lighttan);
+    mat3 lightbasis = mat3(lighttan, -lightbitan, lightdir);
+    vec3 dir = normalize(vertex - camera);
+	float z = length(vertex-camera);
 
-    vec4 res = raymarch( ro, rd );
+    vec3 ro = camera - light;
+    ro *= lightbasis;
+	vec3 rd = dir * lightbasis;
+
+
+	ro /= 200.0; // space is 2 big!!
+	z /= 200.0;
+
+    vec4 res = raymarch(ro, rd, z);
 
 	float sun = clamp( dot(sundir,rd), 0.0, 1.0 );
 	vec3 col = vec3(0.6,0.71,0.75) - rd.y*0.2*vec3(1.0,0.5,1.0) + 0.15*0.5;
