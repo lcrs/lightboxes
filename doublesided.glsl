@@ -24,6 +24,6 @@ vec4 adskUID_lightbox(vec4 i) {
 	hsv.z /= 100.0;
 	vec3 c = adsk_hsv2rgb(hsv);
 	vec3 cmul = i.rgb * c;
-	i.rgb += cmul * i.a * adsk_getLightColour();
+	i.rgb = cmul * i.a;
 	return i;
 }
