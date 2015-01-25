@@ -12,16 +12,32 @@
 //  o single-sided light option? taken care of by flame's lighting in i.a?
 //  o optimize w/shaderanalyzer...
 //  o noise pattern inside area light, like real softbox?
-//  o diffuse/spec/coat on-off buttons... swap out all in one brdf?
 //  o all-in-one BRDF may not match spit out diff/spec/coat in IBL shader
 //  o adapt to deal as best as possible with Material node params and shadows, maybe hijacked Specular map
 //  o reversed normals / double-sided rendering
 
-uniform vec3 adskUID_baseColor;
-uniform float adskUID_metallic;
-uniform float adskUID_subsurface;
-uniform float adskUID_specular;
-uniform float adskUID_roughness;
+vec3 adsk_getComputedDiffuse();
+float adsk_getShininess();
+vec4 adsk_getMaterialSpecular();
+vec3 adsk_getComputedNormal();
+vec3 adsk_getComputedSpecular();
+vec3 adsk_getBinormal();
+vec3 adsk_getTangent();
+vec3 adsk_getVertexPosition();
+vec3 adsk_getCameraPosition();
+float adsk_getTime();
+vec3 adsk_getLightPosition();
+vec3 adsk_getLightDirection();
+vec3 adsk_getLightTangent();
+vec3 adsk_getLightColour();
+float adsk_getAreaLightWidth();
+float adsk_getAreaLightHeight();
+
+vec3 adskUID_baseColor;
+float adskUID_metallic;
+float adskUID_subsurface;
+float adskUID_specular;
+float adskUID_roughness;
 uniform float adskUID_specularTint;
 uniform float adskUID_anisotropic;
 uniform float adskUID_sheen;
@@ -174,7 +190,7 @@ vec4 adskUID_lightbox(vec4 i) {
 	vec3 cam = adsk_getCameraPosition();
     vec3 p = adsk_getVertexPosition();
     vec3 v = normalize(cam - p);
-    vec3 n = adsk_getNormal();
+    vec3 n = adsk_getComputedNormal();
     vec3 lighttan = adsk_getLightTangent();
     vec3 lightbitan = cross(lighttan, adsk_getLightDirection());
     float w = adsk_getAreaLightWidth() * 2.0;
@@ -184,6 +200,13 @@ vec4 adskUID_lightbox(vec4 i) {
 
     // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
+
+    // Gather what material parameters we can
+    adskUID_baseColor = adsk_getComputedDiffuse();
+    adskUID_roughness = adsk_getShininess() / 100.0;
+    adskUID_metallic = adsk_getMaterialSpecular().r;
+    adskUID_specular = adsk_getMaterialSpecular().g;
+    adskUID_subsurface = adsk_getMaterialSpecular().b;
 
     // Accumulator
     vec3 a = vec3(0.0);
@@ -205,7 +228,7 @@ vec4 adskUID_lightbox(vec4 i) {
 
         // Go!
         sample -= 0.5;
-        vec3 light = adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
+        vec3 light = -adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
         vec3 l = normalize(light - p);
         vec3 b = adskUID_BRDF(l, v, n, t, b) * dot(n, l);
 
@@ -214,7 +237,7 @@ vec4 adskUID_lightbox(vec4 i) {
     }
 
     vec3 thislight = a / float(adskUID_samples);
-    i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * thislight;
+    i.rgb += i.a * adsk_getLightColour() * thislight;
 
 	return i;
 }

@@ -17,11 +17,27 @@
 //  o adapt to deal as best as possible with Material node params and shadows, maybe hijacked Specular map
 //  o reversed normals/double-sided rendering
 
-uniform vec3 adskUID_baseColor;
-uniform float adskUID_metallic;
-uniform float adskUID_roughness;
-uniform float adskUID_subsurface;
-uniform float adskUID_specular;
+vec3 adsk_getComputedDiffuse();
+float adsk_getShininess();
+vec4 adsk_getMaterialSpecular();
+vec3 adsk_getComputedNormal();
+vec3 adsk_getComputedSpecular();
+vec3 adsk_getBinormal();
+vec3 adsk_getTangent();
+vec3 adsk_getVertexPosition();
+vec3 adsk_getCameraPosition();
+float adsk_getTime();
+vec3 adsk_getLightPosition();
+vec3 adsk_getLightDirection();
+vec3 adsk_getLightTangent();
+vec3 adsk_getLightColour();
+vec3 adsk_getAngularMapIBL( in int idx, in vec2 coords, float lod );
+
+vec3 adskUID_baseColor;
+float adskUID_metallic;
+float adskUID_roughness;
+float adskUID_subsurface;
+float adskUID_specular;
 uniform float adskUID_specularTint;
 uniform float adskUID_sheen;
 uniform float adskUID_sheenTint;
@@ -33,27 +49,26 @@ uniform int adskUID_samples;
 uniform bool adskUID_diffuseimportance, adskUID_specimportance, adskUID_coatimportance;
 uniform float adskUID_diffuselod, adskUID_speclod, adskUID_coatlod;
 uniform int adskUID_method;
-uniform vec3 adskUID_camrot;
 const float adskUID_PI = 3.14159265358979323846;
 
 float adskUID_luma(vec3 c) { 
     return dot(c, vec3(0.2126, 0.7152, 0.072));
 }
 
-float adskUID_Cdlum = adskUID_luma(adskUID_baseColor);
-vec3 adskUID_Ctint = adskUID_baseColor/adskUID_Cdlum;
-vec3 adskUID_CspecTint = mix(vec3(1.0), adskUID_Ctint, adskUID_specularTint);
-vec3 adskUID_CspecFZ = mix(adskUID_specular*0.08*adskUID_CspecTint, adskUID_baseColor, adskUID_metallic);
-vec3 adskUID_Csheen = mix(vec3(1.0), adskUID_Ctint, adskUID_sheenTint);
-vec3 adskUID_diff_sheen = adskUID_Csheen * adskUID_sheen;
-float adskUID_aspect = sqrt(1.0-adskUID_anisotropic*0.9);
-float adskUID_roughSqr = adskUID_roughness * adskUID_roughness;
-float adskUID_alphax = max(0.001, adskUID_roughSqr/adskUID_aspect);
-float adskUID_alphay = max(0.001, adskUID_roughSqr*adskUID_aspect);
-float adskUID_alphaG = max(0.001, adskUID_roughSqr);
-float adskUID_coatAlpha = mix(0.1, 0.001, adskUID_clearcoatGloss);
-float adskUID_coatAlphaG = 0.25;
-vec3 adskUID_coatFZ = vec3(0.04);
+float adskUID_Cdlum;
+vec3 adskUID_Ctint;
+vec3 adskUID_CspecTint;
+vec3 adskUID_CspecFZ;
+vec3 adskUID_Csheen;
+vec3 adskUID_diff_sheen;
+float adskUID_aspect;
+float adskUID_roughSqr;
+float adskUID_alphax;
+float adskUID_alphay;
+float adskUID_alphaG;
+float adskUID_coatAlpha;
+float adskUID_coatAlphaG;
+vec3 adskUID_coatFZ;
 
 float adskUID_sqr(float v) {
     return v*v;
@@ -413,26 +428,7 @@ vec3 adskUID_hemi(vec2 uv) {
     return normalize(vec3(cos(phi) * sintheta, sin(phi) * sintheta, costheta));
 }
 
-// Degrees to radians
-float adskUID_deg2rad(float angle) {
-    return(angle/(180.0/adskUID_PI));
-}
-
-// Rotates in ZXY order
-vec3 adskUID_rotate(vec3 p, vec3 angles) {
-    float x = adskUID_deg2rad(angles.x);
-    float y = adskUID_deg2rad(angles.y);
-    float z = adskUID_deg2rad(angles.z);
-    mat3 rx = mat3(1.0, 0.0, 0.0, 0.0, cos(x), sin(x), 0.0, -sin(x), cos(x));
-    mat3 ry = mat3(cos(y), 0.0, -sin(y), 0.0, 1.0, 0.0, sin(y), 0.0, cos(y));
-    mat3 rz = mat3(cos(z), sin(z), 0.0, -sin(z), cos(z), 0.0, 0.0, 0.0, 1.0);
-    mat3 r = ry * rx * rz;
-    return(p * r);
-}
-
 vec2 adskUID_latlong(vec3 v) {
-    // Bodge: rotate by opposite of camera rotation
-    v = adskUID_rotate(v, adskUID_camrot);
     float lat = asin(v.y) / adskUID_PI + 0.5;
     float lon = atan(v.z, v.x) / (2.0*adskUID_PI) + 0.75;
     return fract(vec2(lon, lat));
@@ -442,10 +438,36 @@ vec4 adskUID_lightbox(vec4 i) {
 	vec3 cam = adsk_getCameraPosition();
     vec3 p = adsk_getVertexPosition();
     vec3 v = normalize(cam - p);
-    vec3 n = adsk_getNormal();
+    vec3 n = adsk_getComputedNormal();
     vec3 t = normalize(cross(n, vec3(1.0, -1.0, 0.0))); // constant tangent basis - geo tangents currently broken in Flame
     vec3 b = cross(n, t);
     mat3 world2tangent = mat3(t, b, n);
+    vec3 light = -adsk_getLightPosition();
+    vec3 lightdir = adsk_getLightDirection();
+    vec3 lighttan = adsk_getLightTangent();
+    vec3 lightbitan = cross(lightdir, lighttan);
+    mat3 lightbasis = mat3(lighttan, -lightbitan, lightdir);
+
+    // Grab some material parameters
+    adskUID_baseColor = adsk_getComputedDiffuse();
+    adskUID_roughness = adsk_getShininess() / 100.0;
+    adskUID_metallic = adsk_getMaterialSpecular().r;
+    adskUID_specular = adsk_getMaterialSpecular().g;
+    adskUID_subsurface = adsk_getMaterialSpecular().b;
+    adskUID_Cdlum = adskUID_luma(adskUID_baseColor);
+    adskUID_Ctint = adskUID_baseColor/adskUID_Cdlum;
+    adskUID_CspecTint = mix(vec3(1.0), adskUID_Ctint, adskUID_specularTint);
+    adskUID_CspecFZ = mix(adskUID_specular*0.08*adskUID_CspecTint, adskUID_baseColor, adskUID_metallic);
+    adskUID_Csheen = mix(vec3(1.0), adskUID_Ctint, adskUID_sheenTint);
+    adskUID_diff_sheen = adskUID_Csheen * adskUID_sheen;
+    adskUID_aspect = sqrt(1.0-adskUID_anisotropic*0.9);
+    adskUID_roughSqr = adskUID_roughness * adskUID_roughness;
+    adskUID_alphax = max(0.001, adskUID_roughSqr/adskUID_aspect);
+    adskUID_alphay = max(0.001, adskUID_roughSqr*adskUID_aspect);
+    adskUID_alphaG = max(0.001, adskUID_roughSqr);
+    adskUID_coatAlpha = mix(0.1, 0.001, adskUID_clearcoatGloss);
+    adskUID_coatAlphaG = 0.25;
+    adskUID_coatFZ = vec3(0.04);
 
     // Per-fragment seed to decorrelate sampling pattern
     uint seed = adskUID_hash(adskUID_hash(uint(gl_FragCoord.x*abs(p.x*1234.5)), uint(gl_FragCoord.y*abs(p.y*1234.5))), uint(adsk_getTime()));
@@ -476,17 +498,17 @@ vec4 adskUID_lightbox(vec4 i) {
         // For diffuse/spec/coat: warp to important direction, sample, multiply by BRDF and importance, accumulate
         if(adskUID_diffuseon) {
             if(adskUID_diffuseimportance) importance = adskUID_diffuse_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_diffuselod);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz * lightbasis), adskUID_diffuselod);
             returned += light * adskUID_diffuse(importance.xyz, v, n, t, b) * importance.a;
         }
         if(adskUID_specon) {
             if(adskUID_specimportance) importance = adskUID_spec_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_speclod);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz * lightbasis), adskUID_speclod);
             returned += light * adskUID_spec(importance.xyz, v, n, t, b) * importance.a;
         }
         if(adskUID_coaton) {
             if(adskUID_coatimportance) importance = adskUID_coat_importance(v, n, t, b, sample);
-            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz), adskUID_coatlod);
+            light = adsk_getAngularMapIBL(0, adskUID_latlong(importance.xyz * lightbasis), adskUID_coatlod);
             returned += light * adskUID_coat(importance.xyz, v, n) * importance.a;
         }
 
@@ -494,6 +516,6 @@ vec4 adskUID_lightbox(vec4 i) {
     }
     accum /= float(uint(adskUID_samples));
 
-    i.rgb += adsk_getComputedDiffuse() * i.a * adsk_getLightColour() * accum;
+    i.rgb += i.a * adsk_getLightColour() * accum;
 	return i;
 }
