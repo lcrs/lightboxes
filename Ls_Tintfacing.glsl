@@ -1,5 +1,4 @@
 // Tint faces which face the light
-// Works in beta 1 build, but not nessecarily in any other build! Watch out!
 // lewis@lewissaunders.com
 
 vec3 adsk_getLightPosition();
@@ -11,7 +10,7 @@ vec3 adsk_hsv2rgb(vec3 hsv);
 uniform vec3 adskUID_col;
 
 vec4 adskUID_lightbox(vec4 i) {
-	vec3 l = normalize(-adsk_getLightPosition() - adsk_getVertexPosition());
+	vec3 l = normalize(adsk_getLightPosition() - adsk_getVertexPosition());
 	vec3 n = normalize(adsk_getNormal());
 	float facing = dot(n, l);
 	facing = clamp(facing, 0.0, 1.0);
