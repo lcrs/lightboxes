@@ -121,7 +121,7 @@ vec4 adskUID_lightbox(vec4 i)
 {
     vec3 camera = adsk_getCameraPosition();
     vec3 vertex = adsk_getVertexPosition();
-    vec3 light = -adsk_getLightPosition();
+    vec3 light = adsk_getLightPosition();
     vec3 lightdir = adsk_getLightDirection();
     vec3 lighttan = adsk_getLightTangent();
     vec3 lightbitan = cross(lightdir, lighttan);
