@@ -1,0 +1,43 @@
+<ShaderNodePreset SupportsAdaptiveDegradation="False" OverrideNormals="True" CommercialUsePermitted="True" ShaderType="Lightbox" SoftwareVersion="2016.0.0" LimitInputsToTexture="True" Version="1" Description="Returns the various arbitrary output variable supplied by the Lightbox API.  Beware that you need one of every map type in the scene to load this, and if any are missing or deleted it may crash!" Name="Ls_AOVs">
+   <Shader OutputBitDepth="Output" Index="1">
+      <Uniform Default="0" Inc="1" Tooltip="" Row="0" Col="0" Page="0" Type="int" DisplayName="AOV" Name="w" ValueType="Popup">
+      	<PopupEntry Title="adsk_getVertexPosition()" Value="0"></PopupEntry>
+		<PopupEntry Title="adsk_getNormal()" Value="1"></PopupEntry>
+		<PopupEntry Title="adsk_getComputedNormal()" Value="2"></PopupEntry>
+		<PopupEntry Title="adsk_getBinormal()" Value="3"></PopupEntry>
+		<PopupEntry Title="adsk_getTangent()" Value="4"></PopupEntry>
+		<PopupEntry Title="adsk_getLightPosition()" Value="5"></PopupEntry>
+		<PopupEntry Title="adsk_getLightDirection()" Value="6"></PopupEntry>
+		<PopupEntry Title="adsk_getLightTangent()" Value="7"></PopupEntry>
+		<PopupEntry Title="adsk_getLightColour()" Value="8"></PopupEntry>
+		<PopupEntry Title="adsk_getLightAlpha()" Value="9"></PopupEntry>
+		<PopupEntry Title="adsk_getComputedDiffuse()" Value="10"></PopupEntry>
+		<PopupEntry Title="adsk_getComputedSpecular()" Value="11"></PopupEntry>
+		<PopupEntry Title="adsk_getComputedDiffuseMapValue(adsk_getVertexPosition())" Value="12"></PopupEntry>
+		<PopupEntry Title="adsk_getDiffuseMapCoord()" Value="13"></PopupEntry>
+		<PopupEntry Title="adsk_getEmissiveMapCoord()" Value="14"></PopupEntry>
+		<PopupEntry Title="adsk_getSpecularMapCoord()" Value="15"></PopupEntry>
+		<PopupEntry Title="adsk_getNormalMapCoord()" Value="16"></PopupEntry>
+		<PopupEntry Title="adsk_getReflectionMapCoord(adsk_getVertexPosition(), adsk_getComputedNormal())" Value="17"></PopupEntry>
+		<PopupEntry Title="adsk_getParallaxMapCoord()" Value="18"></PopupEntry>
+		<PopupEntry Title="adsk_getDiffuseMapValue(adsk_getDiffuseMapCoord())" Value="19"></PopupEntry>
+		<PopupEntry Title="adsk_getEmissiveMapValue(adsk_getEmissiveMapCoord())" Value="20"></PopupEntry>
+		<PopupEntry Title="adsk_getSpecularMapValue(adsk_getSpecularMapCoord())" Value="21"></PopupEntry>
+		<PopupEntry Title="adsk_getNormalMapValue(adsk_getNormalMapCoord())" Value="22"></PopupEntry>
+		<PopupEntry Title="adsk_getReflectionMapValue(adsk_getReflectionMapCoord(adsk_getVertexPosition(), adsk_getComputedNormal()))" Value="23"></PopupEntry>
+		<PopupEntry Title="adsk_getParallaxMapValue(adsk_getParallaxMapCoord())" Value="24"></PopupEntry>
+		<PopupEntry Title="adsk_getUVMapValue(adsk_getDiffuseMapCoord())" Value="25"></PopupEntry>
+		<PopupEntry Title="adsk_getMaterialDiffuse()" Value="26"></PopupEntry>
+		<PopupEntry Title="adsk_getMaterialSpecular()" Value="27"></PopupEntry>
+		<PopupEntry Title="adsk_getMaterialAmbient()" Value="28"></PopupEntry>
+		<PopupEntry Title="adsk_getShininess()" Value="29"></PopupEntry>
+		<PopupEntry Title="adsk_getComputedShadowCoefficient()" Value="30"></PopupEntry>
+		<PopupEntry Title="adskUID_lightbox(vec4 i) argument's RGB" Value="31"></PopupEntry>
+		<PopupEntry Title="adskUID_lightbox(vec4 i) argument's A" Value="32"></PopupEntry>
+      </Uniform>
+   </Shader>
+   <Page Name="AOVs" Page="0">
+      <Col Name="" Col="0" Page="0">
+      </Col>
+   </Page>
+</ShaderNodePreset>
