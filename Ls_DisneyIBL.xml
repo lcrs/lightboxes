@@ -1,10 +1,10 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="Disney BRDF for IBLs" Name="DisneyIBL">
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" OverrideNormals="True" Version="1" Description="Disney BRDF for IBLs" Name="DisneyIBL">
    <Shader OutputBitDepth="Output" Index="1">
       <Uniform Row="4" Col="0" Page="0" Default="True" Tooltip="" Type="bool" DisplayName="Diffuse" Name="adskUID_diffuseon"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="1" Col="1" Page="0" Type="float" DisplayName="Specular tint" Name="adskUID_specularTint"></Uniform>
       <Uniform ResDependent="None" Max="9.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="2" Col="1" Page="0" Type="float" DisplayName="Sheen" Name="adskUID_sheen"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="3" Col="1" Page="0" Type="float" DisplayName="Sheen tint" Name="adskUID_sheenTint"></Uniform>
-      <Uniform Row="4" Col="1" Page="0" Default="True" Tooltip="" Type="bool" DisplayName="Specular" Name="adskUID_specon"></Uniform>
+      <Uniform Row="4" Col="1" Page="0" Default="True" Tooltip="In material node spec colour (or spec map) RGB is metallic, specular, subsurface respectively" Type="bool" DisplayName="Specular" Name="adskUID_specon"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="0" Col="2" Page="0" Type="float" DisplayName="Clearcoat" Name="adskUID_clearcoat"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="1" Col="2" Page="0" Type="float" DisplayName="Clearcoat gloss" Name="adskUID_clearcoatGloss"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.0" Inc="0.01" Tooltip="" Row="2" Col="2" Page="0" Type="float" DisplayName="Anisotropic" Name="adskUID_anisotropic"></Uniform>
