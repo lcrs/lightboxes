@@ -1,8 +1,16 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="IBL reflection with correct mapping" Name="LatlongIBL" OverrideNormals="True">
+<ShaderNodePreset SupportsAdaptiveDegradation="False" OverrideNormals="True" CommercialUsePermitted="True" ShaderType="Lightbox" SoftwareVersion="2016.0.0" LimitInputsToTexture="True" Version="1" Description="Reflects an IBL map to match latlong environment map reflections from other software
+
+lewis@lewissaunders.com" Name="LatlongIBL">
    <Shader OutputBitDepth="Output" Index="1">
+      <Uniform Row="0" Col="0" Page="0" Default="True" Tooltip="Use correct mapping from reflection direction to position in latlong environment map, which is slightly different to what the IBL node does in cylindrical mode" Type="bool" DisplayName="Use correct mapping" Name="adskUID_correct">
+      </Uniform>
+      <Uniform ResDependent="None" Max="64.0" Min="0.0" Default="0.0" Inc="0.01" Tooltip="Mipmap LOD offset, crudely but quickly blurs the map" Row="1" Col="0" Page="0" Type="float" DisplayName="Mipmap LOD" Name="adskUID_lod">
+      </Uniform>
+      <Uniform Max="1000000" Min="0" Default="0" Inc="1" Tooltip="Use this IBL map number if multiple IBL nodes in scene" Row="2" Col="0" Page="0" Type="int" DisplayName="IBL no." Name="adskUID_iblidx">
+      </Uniform>
    </Shader>
    <Page Name="LatlongIBL" Page="0">
-      <Col Name="" Col="0" Page="0">
+      <Col Name="LatlongIBL" Col="0" Page="0">
       </Col>
    </Page>
 </ShaderNodePreset>

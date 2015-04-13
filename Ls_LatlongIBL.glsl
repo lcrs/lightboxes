@@ -1,13 +1,20 @@
-#line 1
-// Correct IBL reflection mapping
+// Correct IBL reflections for latlong maps
 // lewis@lewissanders.com
+
+vec3 adsk_getCameraPosition();
+vec3 adsk_getVertexPosition();
+vec3 adsk_getComputedNormal();
+mat4 adsk_getIBLRotationMatrix(in int idx);
+vec3 adsk_getAngularMapIBL(in int idx, in vec2 coords, float lod);
+
+uniform int adskUID_iblidx;
+uniform bool adskUID_correct;
+uniform float adskUID_lod;
 
 const float adskUID_PI = 3.14159265358979323846;
 
 // This function is from the Action ubershader and seems wrong
-// convert a 3d vector into the 2d coord (uv) to index a cylinder map
-vec2 adskUID_getCylinderMappingTexCoord( in vec3 transfRefl )
-{
+vec2 adskUID_getCylinderMappingTexCoord( in vec3 transfRefl ) {
    vec3 normTransfRefl = normalize( transfRefl );
    
    // compute the rotation angle between x/z on the y axis
@@ -22,17 +29,27 @@ vec2 adskUID_getCylinderMappingTexCoord( in vec3 transfRefl )
 
 // This one matches Houdini's reflection of the same environment
 vec2 adskUID_latlong(vec3 v) {
-    float lat = asin(v.y) / adskUID_PI + 0.5;
-    float lon = atan(v.z, v.x) / (2.0*adskUID_PI) + 0.75;
-    return fract(vec2(lon, lat));
+	float lat = asin(v.y) / adskUID_PI + 0.5;
+	float lon = atan(v.z, v.x) / (2.0*adskUID_PI) + 0.75;
+	return fract(vec2(lon, lat));
 }
 
 vec4 adskUID_lightbox(vec4 i) {
 	vec3 cam = adsk_getCameraPosition();
-    vec3 p = adsk_getVertexPosition();
-    vec3 v = normalize(cam - p);
-    vec3 n = adsk_getNormal();
+	vec3 vertex = adsk_getVertexPosition();
+	vec3 view = normalize(vertex - cam);
+	vec3 n = normalize(adsk_getComputedNormal());
+	vec3 refl = reflect(view, n);
 
-    return vec4(5.0 * adsk_getAngularMapIBL(0, adskUID_latlong(reflect(-v, n)), 0.0), 1.0);
+	refl = (adsk_getIBLRotationMatrix(adskUID_iblidx) * vec4(refl, 0.0)).xyz;
 
+	vec2 st;
+	if(adskUID_correct) {
+		st = adskUID_latlong(refl);
+	} else {
+		st = adskUID_getCylinderMappingTexCoord(refl);
+	}
+	vec3 sample = adsk_getAngularMapIBL(adskUID_iblidx, st, adskUID_lod);
+
+	return vec4(sample, 1.0);
 }
