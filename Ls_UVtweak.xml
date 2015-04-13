@@ -1,16 +1,18 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="" Name="UV Tweak">
+<ShaderNodePreset SupportsAdaptiveDegradation="False" OverrideNormals="True" CommercialUsePermitted="True" ShaderType="Lightbox" SoftwareVersion="2016.0.0" LimitInputsToTexture="True" Version="1" Description="Offsets the diffuse texture inside the light's falloff area - soften the light's profile for best effect.  This is mainly useful because it can be used to directly tweak projected textures, something that otherwise requires messing around with a bicubic in a source node.  Because this fetches the diffuse texture directly, sadly it always 'cuts through' other lighting.  Other lightboxes should process after this, i.e. this should be at the bottom of the priority editor.  It's possible to use multiple copies on one object, but the boundaries between the areas they affect are quite hard.
+
+lewis@lewissaunders.com" Name="UVtweak">
    <Shader OutputBitDepth="Output" Index="1">
-      <Uniform Inc="0.01" Tooltip="" Row="0" Col="0" Page="0" IconType="None" Type="vec2" DisplayName="Offset" Name="adskUID_offset">
-         <SubUniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="0.0">
-         </SubUniform>
-         <SubUniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="0.0">
-         </SubUniform>
+      <Uniform Row="0" Col="0" Page="0" Default="False" Tooltip="Tint area of influence magenta" Type="bool" DisplayName="Show area" Name="adskUID_showarea">
       </Uniform>
-      <Uniform Row="2" Col="0" Page="0" Default="False" Tooltip="" Type="bool" DisplayName="Show area" Name="adskUID_showarea">
+      <Uniform Inc="0.001" Tooltip="" Row="1" Col="0" Page="0" IconType="None" Type="vec2" DisplayName="UV offset" Name="adskUID_offset">
+         <SubUniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="0.0">
+         </SubUniform>
+         <SubUniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="0.0">
+         </SubUniform>
       </Uniform>
    </Shader>
-   <Page Name="UV Tweak" Page="0">
-      <Col Name="Transform" Col="0" Page="0">
+   <Page Name="UVtweak" Page="0">
+      <Col Name="UVtweak" Col="0" Page="0">
       </Col>
    </Page>
 </ShaderNodePreset>
