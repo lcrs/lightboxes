@@ -1,6 +1,6 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="False" OverrideNormals="True" CommercialUsePermitted="True" ShaderType="Lightbox" SoftwareVersion="2016.0.0" LimitInputsToTexture="True" Version="1" Description="Returns the various arbitrary output variable supplied by the Lightbox API.  Beware that you need one of every map type in the scene to load this, and if any are missing or deleted it may crash!" Name="Ls_AOVs">
+<ShaderNodePreset SupportsAdaptiveDegradation="False" OverrideNormals="True" CommercialUsePermitted="True" ShaderType="Lightbox" SoftwareVersion="2016.0.0" LimitInputsToTexture="True" Version="1" Description="Returns the various arbitrary output variables supplied by the Lightbox API.  Beware that you need one of every map type in the scene to load this, and if any are missing or deleted it may crash! It also seems to have an aversion to loaded alongside 3D Shape nodes..." Name="Ls_AOVs">
    <Shader OutputBitDepth="Output" Index="1">
-      <Uniform Default="0" Inc="1" Tooltip="" Row="0" Col="0" Page="0" Type="int" DisplayName="AOV" Name="w" ValueType="Popup">
+      <Uniform Default="0" Inc="1" Tooltip="" Row="0" Col="0" Page="0" Type="int" DisplayName="Variable" Name="w" ValueType="Popup">
       	<PopupEntry Title="adsk_getVertexPosition()" Value="0"></PopupEntry>
 		<PopupEntry Title="adsk_getNormal()" Value="1"></PopupEntry>
 		<PopupEntry Title="adsk_getComputedNormal()" Value="2"></PopupEntry>
@@ -32,12 +32,18 @@
 		<PopupEntry Title="adsk_getMaterialAmbient()" Value="28"></PopupEntry>
 		<PopupEntry Title="adsk_getShininess()" Value="29"></PopupEntry>
 		<PopupEntry Title="adsk_getComputedShadowCoefficient()" Value="30"></PopupEntry>
-		<PopupEntry Title="adskUID_lightbox(vec4 i) argument's RGB" Value="31"></PopupEntry>
-		<PopupEntry Title="adskUID_lightbox(vec4 i) argument's A" Value="32"></PopupEntry>
+		<PopupEntry Title="lightbox(vec4 i) argument's RGB" Value="31"></PopupEntry>
+		<PopupEntry Title="lightbox(vec4 i) argument's A" Value="32"></PopupEntry>
+      </Uniform>
+      <Uniform Default="0" Inc="1" Tooltip="Transform variable by a matrix" Row="1" Col="0" Page="0" Type="int" DisplayName="Extra transform" Name="xform" ValueType="Popup">
+      	<PopupEntry Title="None" Value="0"></PopupEntry>
+      	<PopupEntry Title="Modelview matrix" Value="1"></PopupEntry>
+      	<PopupEntry Title="Modelview matrix inverse" Value="2"></PopupEntry>
+      	<PopupEntry Title="Light's coordinate space" Value="3"></PopupEntry>
       </Uniform>
    </Shader>
    <Page Name="AOVs" Page="0">
-      <Col Name="" Col="0" Page="0">
+      <Col Name="AOVs" Col="0" Page="0">
       </Col>
    </Page>
 </ShaderNodePreset>

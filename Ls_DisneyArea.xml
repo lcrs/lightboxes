@@ -1,4 +1,4 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="Disney BRDF for area lights" Name="DisneyArea">
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" OverrideNormals="True" Version="1" Description="Disney BRDF for area lights" Name="DisneyArea">
    <Shader OutputBitDepth="Output" Index="1">
       <Uniform Row="4" Col="0" Page="0" Default="True" Tooltip="" Type="bool" DisplayName="Diffuse" Name="adskUID_diffuseon"></Uniform>
       <Uniform ResDependent="None" Max="1.0" Min="0.0" Default="0.5" Inc="0.01" Tooltip="" Row="1" Col="1" Page="0" Type="float" DisplayName="Specular tint" Name="adskUID_specularTint"></Uniform>

@@ -1,4 +1,4 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="" Name="Doublesided">
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" OverrideNormals="True" Version="1" Description="Tint front faces one colour, back faces another, handy for thin geo like cloth or paper" Name="Doublesided">
    <Shader OutputBitDepth="Output" Index="1">
       <Uniform Inc="0.1" Tooltip="" Row="0" Col="0" Page="0" IconType="None" ValueType="ColourWheel" Type="vec3" DisplayName="Front" Name="adskUID_cfront" HueShift="False" AngleName="H" IntensityName1="S" IntensityName2="V">
          <SubUniform ResDependent="None" Max="1000.0" Min="-1000.0" Default="270.0"></SubUniform>

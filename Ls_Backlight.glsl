@@ -10,7 +10,7 @@ uniform int adskUID_wrap;
 
 vec4 adskUID_lightbox(vec4 i) {
 	vec3 cam = adsk_getCameraPosition();
-	vec3 light = -adsk_getLightPosition();
+	vec3 light = adsk_getLightPosition();
 	vec3 p = adsk_getVertexPosition();
 	vec3 n = adsk_getComputedNormal();
 	vec3 v = normalize(cam - p);

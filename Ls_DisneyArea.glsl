@@ -228,7 +228,7 @@ vec4 adskUID_lightbox(vec4 i) {
 
         // Go!
         sample -= 0.5;
-        vec3 light = -adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
+        vec3 light = adsk_getLightPosition() + (sample.x * lighttan * w) + (sample.y * lightbitan * h);
         vec3 l = normalize(light - p);
         vec3 b = adskUID_BRDF(l, v, n, t, b) * dot(n, l);
 

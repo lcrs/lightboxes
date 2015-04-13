@@ -1,4 +1,4 @@
-<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" Version="1" Description="" Name="Puffy Clouds">
+<ShaderNodePreset SupportsAdaptiveDegradation="0" LimitInputsToTexture="True" OverrideNormals="True" Version="1" Description="" Name="PuffyClouds">
    <Shader OutputBitDepth="Output" Index="1">
       <Uniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="6.0" Inc="0.01" Tooltip="" Row="0" Col="0" Page="0" Type="float" DisplayName="Detail" Name="adskUID_Detail"></Uniform>
       <Uniform ResDependent="None" Max="1000000.0" Min="-1000000.0" Default="1.0" Inc="0.01" Tooltip="" Row="1" Col="0" Page="0" Type="float" DisplayName="Density" Name="adskUID_Density"></Uniform>
