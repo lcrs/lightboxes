@@ -78,7 +78,10 @@ vec4 adskUID_raymarch( in vec3 ro, in vec3 rd, float z )
 	vec4 sum = vec4(0, 0, 0, 0);
 
 	float t = 0.1;
-    float stepsize = (adskUID_far/adskUID_scale) / float(adskUID_steps);
+    float stepsize_far = (adskUID_far/adskUID_scale) / float(adskUID_steps);
+    float stepsize_geo = z / float(adskUID_steps);
+    float stepsize = mix(stepsize_far, stepsize_geo, 0.0);
+
 	for(int i=0; i<adskUID_steps; i++)
 	{
 		if( sum.a > 0.99 ) continue;
@@ -139,7 +142,7 @@ vec4 adskUID_lightbox(vec4 i)
 	float fuzz = adskUID_rand(vertex.xy/1000.0);
 	float fuzz2 = adskUID_rand(vec2(fuzz, adsk_getTime()));
 	float fuzz3 = adskUID_rand(vec2(fuzz, fuzz2));
-	ro += (adskUID_fuzz/float(adskUID_steps)) * (vec3(fuzz, fuzz2, fuzz3) - vec3(0.5));
+	ro += rd * fuzz3 * adskUID_fuzz;
 
     vec4 res = adskUID_raymarch(ro, rd, z);
 
